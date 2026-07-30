@@ -1,9 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "import",
-    "typescript"
-  ],
+  "plugins": ["import", "typescript"],
   "categories": {
     "correctness": "off"
   },
@@ -17,15 +14,12 @@
     "**/coverage/**",
     "**/dist/**",
     "**/snap/**",
-    "**/vite.config.*.timestamp-*.*",
-    "prettier.config.js"
+    "**/vite.config.*.timestamp-*.*"
   ],
   "rules": {},
   "overrides": [
     {
-      "files": [
-        "**/*.{js,ts,tsx}"
-      ],
+      "files": ["**/*.{js,ts,tsx}"],
       "rules": {
         "for-direction": "error",
         "no-async-promise-executor": "error",
@@ -70,10 +64,7 @@
         "require-yield": "error",
         "use-isnan": "error",
         "valid-typeof": "error",
-        "import/consistent-type-specifier-style": [
-          "error",
-          "prefer-top-level"
-        ],
+        "import/consistent-type-specifier-style": ["error", "prefer-top-level"],
         "import/first": "error",
         "import/newline-after-import": "error",
         "import/no-commonjs": "error",
@@ -92,10 +83,7 @@
             "prefer": "type-imports"
           }
         ],
-        "typescript/method-signature-style": [
-          "error",
-          "property"
-        ],
+        "typescript/method-signature-style": ["error", "property"],
         "typescript/no-duplicate-enum-values": "error",
         "typescript/no-extra-non-null-assertion": "error",
         "typescript/no-inferrable-types": [
@@ -113,18 +101,14 @@
         "typescript/prefer-for-of": "warn",
         "typescript/triple-slash-reference": "error"
       },
-      "jsPlugins": [
-        "@stylistic/eslint-plugin"
-      ],
+      "jsPlugins": ["@stylistic/eslint-plugin"],
       "env": {
         "es2020": true,
         "browser": true
       }
     },
     {
-      "files": [
-        "**/*.vue"
-      ],
+      "files": ["**/*.vue"],
       "rules": {
         "for-direction": "error",
         "no-async-promise-executor": "error",
@@ -169,10 +153,7 @@
         "require-yield": "error",
         "use-isnan": "error",
         "valid-typeof": "error",
-        "import/consistent-type-specifier-style": [
-          "error",
-          "prefer-top-level"
-        ],
+        "import/consistent-type-specifier-style": ["error", "prefer-top-level"],
         "import/first": "error",
         "import/newline-after-import": "error",
         "import/no-commonjs": "error",
@@ -191,10 +172,7 @@
             "prefer": "type-imports"
           }
         ],
-        "typescript/method-signature-style": [
-          "error",
-          "property"
-        ],
+        "typescript/method-signature-style": ["error", "property"],
         "typescript/no-duplicate-enum-values": "error",
         "typescript/no-extra-non-null-assertion": "error",
         "typescript/no-inferrable-types": [
@@ -212,9 +190,7 @@
         "typescript/prefer-for-of": "warn",
         "typescript/triple-slash-reference": "error"
       },
-      "jsPlugins": [
-        "@stylistic/eslint-plugin"
-      ],
+      "jsPlugins": ["@stylistic/eslint-plugin"],
       "env": {
         "browser": true
       }

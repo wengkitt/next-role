@@ -32,15 +32,14 @@ If you prefer not to use Tailwind CSS:
 
 ## Linting & Formatting
 
-
-This project uses [Oxlint](https://oxc.rs/docs/guide/usage/linter/) and [Prettier](https://prettier.io/) for linting and formatting. The following scripts are available:
+This project uses [Oxlint](https://oxc.rs/docs/guide/usage/linter/) for linting and [Oxfmt](https://oxc.rs/docs/guide/usage/formatter/) for formatting. The following scripts are available:
 
 ```bash
 pnpm lint
-pnpm format
-pnpm check
+pnpm lint:fix
+pnpm fmt
+pnpm fmt:check
 ```
-
 
 ## Deploy to Cloudflare Workers
 
@@ -53,8 +52,6 @@ This project uses the Cloudflare Vite plugin (configured in `vite.config.ts`) an
 For production env vars, run `wrangler secret put MY_VAR` for each secret listed in `.env.example`. Public (non-secret) vars go in `wrangler.jsonc` under `vars`.
 
 KV, D1, R2, and Durable Object bindings are configured in `wrangler.jsonc` — see https://developers.cloudflare.com/workers/wrangler/configuration/.
-
-
 
 ## Routing
 
@@ -73,7 +70,7 @@ Now that you have two routes you can use a `Link` component to navigate between 
 To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
 
 ```tsx
-import { Link } from "@tanstack/react-router";
+import { Link } from '@tanstack/react-router'
 ```
 
 Then anywhere in your JSX you can use it like so:
@@ -141,11 +138,11 @@ const getServerTime = createServerFn({
 // Use in a component
 function MyComponent() {
   const [time, setTime] = useState('')
-  
+
   useEffect(() => {
     getServerTime().then(setTime)
   }, [])
-  
+
   return <div>Server time: {time}</div>
 }
 ```
@@ -197,8 +194,6 @@ function PeopleComponent() {
 ```
 
 Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-
 
 # Learn More
 
