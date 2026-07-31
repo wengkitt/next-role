@@ -4,13 +4,14 @@ import { AuthShell } from '#/components/AuthShell'
 import { useForm } from '@tanstack/react-form'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, LockKeyhole, Mail } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export const Route = createFileRoute('/sign-in')({ component: SignInPage })
 
 function SignInPage() {
   const navigate = useNavigate({ from: Route.fullPath })
   const [authError, setAuthError] = useState<string | null>(null)
+  const { data: session, isPending: isSessionPending } = authClient.useSession()
   const form = useForm({
     defaultValues: { email: '', password: '' },
     validators: { onChange: signInSchema },
@@ -26,6 +27,21 @@ function SignInPage() {
       navigate({ to: '/app' })
     },
   })
+
+  useEffect(() => {
+    if (!isSessionPending && session) navigate({ to: '/app', replace: true })
+  }, [isSessionPending, navigate, session])
+
+  if (session) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-base-200">
+        <span
+          className="loading loading-spinner loading-lg text-primary"
+          aria-label="Returning to home"
+        />
+      </main>
+    )
+  }
 
   return (
     <AuthShell>
