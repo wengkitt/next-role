@@ -23,11 +23,13 @@
     "db:studio:remote": "drizzle-kit studio --config=drizzle.config.ts"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "^1.6.25",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-router": "latest",
     "@tanstack/react-router-devtools": "latest",
     "@tanstack/react-start": "latest",
+    "better-auth": "^1.6.25",
     "daisyui": "^5.7.8",
     "drizzle-orm": "^0.45.2",
     "react": "^19.2.0",

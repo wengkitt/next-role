@@ -73,6 +73,16 @@ Use `db` from `src/db/index.ts` only in server-side code (server functions,
 loaders, or server routes). It is backed by the Worker binding and must not be
 imported by a browser-only module.
 
+### Authentication
+
+Better Auth handles email-and-password sign-up, sign-in, sessions, and sign-out
+at `/api/auth/*`. Email verification is intentionally disabled. For local
+development, copy `.dev.vars.example` to `.dev.vars`, generate a 32-byte secret
+with `openssl rand -base64 32`, and set `BETTER_AUTH_SECRET` there.
+
+Before deploying, set the secret with `pnpm exec wrangler secret put
+BETTER_AUTH_SECRET`, then configure `BETTER_AUTH_URL` to the production app URL.
+
 ## Routing
 
 This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
