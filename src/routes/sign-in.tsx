@@ -1,34 +1,32 @@
+import { formatValidationErrors, signInSchema } from '#/auth/schemas'
 import { authClient } from '#/auth/client'
 import { AuthShell } from '#/components/AuthShell'
+import { useForm } from '@tanstack/react-form'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, LockKeyhole, Mail } from 'lucide-react'
 import { useState } from 'react'
-import type { FormEvent } from 'react'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/sign-in')({ component: SignInPage })
 
 function SignInPage() {
   const navigate = useNavigate({ from: Route.fullPath })
-  const [error, setError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    setError(null)
-    setIsSubmitting(true)
-    const { error: signInError } = await authClient.signIn.email({
-      email: String(formData.get('email')),
-      password: String(formData.get('password')),
-    })
-    setIsSubmitting(false)
-    if (signInError) {
-      setError(
-        signInError.message ?? 'We could not sign you in. Please try again.',
-      )
-      return
-    }
-    navigate({ to: '/app' })
-  }
+  const [authError, setAuthError] = useState<string | null>(null)
+  const form = useForm({
+    defaultValues: { email: '', password: '' },
+    validators: { onChange: signInSchema },
+    onSubmit: async ({ value }) => {
+      setAuthError(null)
+      const { error } = await authClient.signIn.email(value)
+      if (error) {
+        setAuthError(
+          error.message ?? 'We could not sign you in. Please try again.',
+        )
+        return
+      }
+      navigate({ to: '/app' })
+    },
+  })
+
   return (
     <AuthShell>
       <div className="card border border-base-300 bg-base-100 shadow-sm">
@@ -37,54 +35,117 @@ function SignInPage() {
           <p className="text-base-content/70">
             Sign in to continue building your next resume.
           </p>
-          {error && (
+          {authError && (
             <div
               role="alert"
               className="alert alert-error alert-soft mt-3 text-sm"
             >
-              {error}
+              {authError}
             </div>
           )}
-          <form className="mt-3 space-y-4" onSubmit={handleSubmit}>
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">Email address</legend>
-              <label className="input w-full">
-                <Mail size={17} aria-hidden="true" />
-                <input
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  required
-                />
-              </label>
-            </fieldset>
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">Password</legend>
-              <label className="input w-full">
-                <LockKeyhole size={17} aria-hidden="true" />
-                <input
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="Enter your password"
-                  minLength={8}
-                  required
-                />
-              </label>
-            </fieldset>
-            <button
-              className="btn btn-primary btn-block mt-3"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span className="loading loading-spinner loading-sm" />
-              ) : (
-                <>
-                  Sign in <ArrowRight size={17} aria-hidden="true" />
-                </>
+          <form
+            className="mt-3 space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void form.handleSubmit()
+            }}
+          >
+            <form.Field name="email">
+              {(field) => {
+                const hasError =
+                  field.state.meta.isTouched && !field.state.meta.isValid
+                return (
+                  <fieldset className="fieldset">
+                    <legend className="fieldset-legend">Email address</legend>
+                    <label
+                      className={`input w-full ${hasError ? 'input-error' : ''}`}
+                    >
+                      <Mail size={17} aria-hidden="true" />
+                      <input
+                        name={field.name}
+                        type="email"
+                        autoComplete="email"
+                        placeholder="you@example.com"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(event.target.value)
+                        }
+                        aria-invalid={hasError}
+                        aria-describedby={
+                          hasError ? 'sign-in-email-error' : undefined
+                        }
+                      />
+                    </label>
+                    {hasError && (
+                      <p
+                        id="sign-in-email-error"
+                        className="label text-error"
+                        role="alert"
+                      >
+                        {formatValidationErrors(field.state.meta.errors)}
+                      </p>
+                    )}
+                  </fieldset>
+                )
+              }}
+            </form.Field>
+            <form.Field name="password">
+              {(field) => {
+                const hasError =
+                  field.state.meta.isTouched && !field.state.meta.isValid
+                return (
+                  <fieldset className="fieldset">
+                    <legend className="fieldset-legend">Password</legend>
+                    <label
+                      className={`input w-full ${hasError ? 'input-error' : ''}`}
+                    >
+                      <LockKeyhole size={17} aria-hidden="true" />
+                      <input
+                        name={field.name}
+                        type="password"
+                        autoComplete="current-password"
+                        placeholder="Enter your password"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(event.target.value)
+                        }
+                        aria-invalid={hasError}
+                        aria-describedby={
+                          hasError ? 'sign-in-password-error' : undefined
+                        }
+                      />
+                    </label>
+                    {hasError && (
+                      <p
+                        id="sign-in-password-error"
+                        className="label text-error"
+                        role="alert"
+                      >
+                        {formatValidationErrors(field.state.meta.errors)}
+                      </p>
+                    )}
+                  </fieldset>
+                )
+              }}
+            </form.Field>
+            <form.Subscribe selector={(state) => state.isSubmitting}>
+              {(isSubmitting) => (
+                <button
+                  className="btn btn-primary btn-block mt-3"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <span className="loading loading-spinner loading-sm" />
+                  ) : (
+                    <>
+                      Sign in <ArrowRight size={17} aria-hidden="true" />
+                    </>
+                  )}
+                </button>
               )}
-            </button>
+            </form.Subscribe>
           </form>
           <p className="mt-5 text-center text-sm text-base-content/70">
             New to NextRole?{' '}
