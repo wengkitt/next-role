@@ -1,19 +1,29 @@
 import { formatValidationErrors, signUpSchema } from '#/auth/schemas'
+import { getAuthSession } from '#/auth/session'
 import { authClient } from '#/auth/client'
 import { AuthShell } from '#/components/AuthShell'
 import { useForm } from '@tanstack/react-form'
 import type { AnyFieldApi } from '@tanstack/react-form'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from '@tanstack/react-router'
 import { ArrowRight, LockKeyhole, Mail, UserRound } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 
-export const Route = createFileRoute('/sign-up')({ component: SignUpPage })
+export const Route = createFileRoute('/sign-up')({
+  beforeLoad: async () => {
+    if (await getAuthSession()) throw redirect({ to: '/app/dashboard' })
+  },
+  component: SignUpPage,
+})
 
 function SignUpPage() {
   const navigate = useNavigate({ from: Route.fullPath })
   const [authError, setAuthError] = useState<string | null>(null)
-  const { data: session, isPending: isSessionPending } = authClient.useSession()
   const form = useForm({
     defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
     validators: { onChange: signUpSchema },
@@ -31,24 +41,9 @@ function SignUpPage() {
         )
         return
       }
-      navigate({ to: '/app' })
+      navigate({ to: '/app/dashboard' })
     },
   })
-
-  useEffect(() => {
-    if (!isSessionPending && session) navigate({ to: '/app', replace: true })
-  }, [isSessionPending, navigate, session])
-
-  if (session) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-base-200">
-        <span
-          className="loading loading-spinner loading-lg text-primary"
-          aria-label="Returning to home"
-        />
-      </main>
-    )
-  }
 
   return (
     <AuthShell>
