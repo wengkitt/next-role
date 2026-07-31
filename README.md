@@ -53,6 +53,36 @@ For production env vars, run `wrangler secret put MY_VAR` for each secret listed
 
 KV, D1, R2, and Durable Object bindings are configured in `wrangler.jsonc` — see https://developers.cloudflare.com/workers/wrangler/configuration/.
 
+### D1 and Drizzle ORM
+
+The project is configured with a local D1 binding named `DB`, Drizzle schema in
+`src/db/schema.ts`, and generated SQL migrations in `drizzle/`.
+
+1. Authenticate with Cloudflare, then create the database:
+   `pnpm exec wrangler d1 create next-role-db`
+2. Copy the returned database UUID into `wrangler.jsonc` at
+   `d1_databases[0].database_id`.
+3. Copy `.env.example` to `.env` and add the account ID, database ID, and a
+   D1-edit API token. These values are only needed by Drizzle Kit's HTTP client.
+4. Generate a migration after changing `src/db/schema.ts`:
+   `pnpm db:generate`
+5. Apply migrations locally with `pnpm db:migrate:local`, or to D1 with
+   `pnpm db:migrate:remote`.
+
+Use `db` from `src/db/index.ts` only in server-side code (server functions,
+loaders, or server routes). It is backed by the Worker binding and must not be
+imported by a browser-only module.
+
+### Authentication
+
+Better Auth handles email-and-password sign-up, sign-in, sessions, and sign-out
+at `/api/auth/*`. Email verification is intentionally disabled. For local
+development, copy `.dev.vars.example` to `.dev.vars`, generate a 32-byte secret
+with `openssl rand -base64 32`, and set `BETTER_AUTH_SECRET` there.
+
+Before deploying, set the secret with `pnpm exec wrangler secret put
+BETTER_AUTH_SECRET`, then configure `BETTER_AUTH_URL` to the production app URL.
+
 ## Routing
 
 This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.

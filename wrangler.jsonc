@@ -12,6 +12,14 @@
     "enabled": true,
   },
   "upload_source_maps": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "next-role-db",
+      "database_id": "f5c7540b-0ad3-45be-bf23-f41b797d4afe",
+      "migrations_dir": "drizzle",
+    },
+  ],
   /**
    * Smart Placement
    * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
