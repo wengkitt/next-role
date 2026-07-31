@@ -4,25 +4,49 @@ import { saveLandingToast } from '#/components/LandingToast'
 import type { ResumeSummary } from '#/data/resumes'
 
 import { ResumeCard } from './ResumeCard'
+import { ResumeDialog } from '#/components/resumes/ResumeDialogs'
+import { useNavigate, useRouter } from '@tanstack/react-router'
+import { useRef, useState } from 'react'
 
 type CreateResumeButtonProps = { className?: string }
 
 export function CreateResumeButton({ className }: CreateResumeButtonProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const navigate = useNavigate()
+  const router = useRouter()
+  function close() {
+    setIsOpen(false)
+    window.setTimeout(() => triggerRef.current?.focus(), 0)
+  }
   return (
-    <button
-      className={`btn btn-primary ${className ?? ''}`}
-      type="button"
-      onClick={() =>
-        saveLandingToast({
-          message:
-            'Resume creation will be available when the editor is added.',
-          type: 'info',
-        })
-      }
-    >
-      <Plus size={18} aria-hidden="true" />
-      Create Resume
-    </button>
+    <>
+      <button
+        ref={triggerRef}
+        className={`btn btn-primary ${className ?? ''}`}
+        type="button"
+        onClick={() => setIsOpen(true)}
+      >
+        <Plus size={18} aria-hidden="true" />
+        Create Resume
+      </button>
+      {isOpen && (
+        <ResumeDialog
+          mode="create"
+          onClose={close}
+          onSuccess={(resume) => {
+            close()
+            saveLandingToast({ message: 'Resume created.', type: 'success' })
+            void router.invalidate()
+            if (resume)
+              void navigate({
+                to: '/app/resumes/$resumeId/edit',
+                params: { resumeId: resume.id },
+              })
+          }}
+        />
+      )}
+    </>
   )
 }
 
