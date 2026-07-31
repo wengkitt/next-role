@@ -12,6 +12,20 @@
     "enabled": true,
   },
   "upload_source_maps": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "next-role-db",
+      // Set this after running `pnpm exec wrangler d1 create next-role-db`.
+      "database_id": "",
+      "migrations_dir": "drizzle",
+    },
+    {
+      "binding": "next_role_db",
+      "database_name": "next-role-db",
+      "database_id": "f5c7540b-0ad3-45be-bf23-f41b797d4afe",
+    },
+  ],
   /**
    * Smart Placement
    * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

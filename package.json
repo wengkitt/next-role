@@ -15,7 +15,12 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "deploy": "pnpm run build && wrangler deploy",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "db:studio:local": "drizzle-kit studio --config=drizzle.local.config.ts",
+    "db:studio:remote": "drizzle-kit studio --config=drizzle.config.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
@@ -24,6 +29,7 @@
     "@tanstack/react-router-devtools": "latest",
     "@tanstack/react-start": "latest",
     "daisyui": "^5.7.8",
+    "drizzle-orm": "^0.45.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwindcss": "^4.1.18"
@@ -32,10 +38,14 @@
     "@cloudflare/vite-plugin": "^1.26.0",
     "@tanstack/devtools-vite": "latest",
     "@tanstack/router-cli": "^1.132.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.20.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
+    "better-sqlite3": "^13.0.2",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
     "oxfmt": "^0.61.0",
     "oxlint": "^1.76.0",
     "typescript": "^6.0.2",
