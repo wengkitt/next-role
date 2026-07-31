@@ -1,5 +1,5 @@
 import { Check, Palette } from 'lucide-react'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 export const DEFAULT_THEME = 'light'
 
@@ -60,20 +60,41 @@ export function ThemeInitializer() {
 export function ThemeSelector() {
   const [theme, setTheme] = useState<ThemeName>(DEFAULT_THEME)
   const menuId = useId()
+  const menuRef = useRef<HTMLDetailsElement>(null)
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem('nextrole-theme')
     if (isThemeName(savedTheme)) setTheme(savedTheme)
   }, [])
 
+  useEffect(() => {
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        menuRef.current?.removeAttribute('open')
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') menuRef.current?.removeAttribute('open')
+    }
+
+    document.addEventListener('pointerdown', closeOnOutsideClick)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [])
+
   function selectTheme(nextTheme: ThemeName) {
     setTheme(nextTheme)
     document.documentElement.dataset.theme = nextTheme
     window.localStorage.setItem('nextrole-theme', nextTheme)
+    menuRef.current?.removeAttribute('open')
   }
 
   return (
-    <details className="dropdown dropdown-end">
+    <details ref={menuRef} className="dropdown dropdown-end">
       <summary
         className="btn btn-ghost btn-sm btn-square"
         aria-label="Choose color theme"
