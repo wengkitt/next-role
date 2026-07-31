@@ -2,6 +2,7 @@ import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
+import { ThemeInitializer } from '#/components/ThemeSelector'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
@@ -15,7 +16,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'NextRole | Professional Resume Builder',
       },
     ],
     links: [
@@ -30,11 +31,12 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light">
       <head>
         <HeadContent />
       </head>
       <body>
+        <ThemeInitializer />
         {children}
         <TanStackDevtools
           config={{
