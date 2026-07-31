@@ -1,6 +1,10 @@
 import { FileText, MoreHorizontal, Pencil, Copy, Trash2 } from 'lucide-react'
 
 import { saveLandingToast } from '#/components/LandingToast'
+import { duplicateResume } from '#/data/resumes'
+import { ResumeDialog } from '#/components/resumes/ResumeDialogs'
+import { Link, useRouter } from '@tanstack/react-router'
+import { useState } from 'react'
 import type { ResumeSummary } from '#/data/resumes'
 
 type ResumeCardProps = {
@@ -8,11 +12,24 @@ type ResumeCardProps = {
 }
 
 export function ResumeCard({ resume }: ResumeCardProps) {
-  function showUnavailable(action: string) {
-    saveLandingToast({
-      message: `${action} will be available when resume management is connected.`,
-      type: 'info',
-    })
+  const router = useRouter()
+  const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null)
+  const [isDuplicating, setIsDuplicating] = useState(false)
+  async function duplicate() {
+    if (isDuplicating) return
+    setIsDuplicating(true)
+    try {
+      await duplicateResume({ data: { resumeId: resume.id } })
+      await router.invalidate()
+      saveLandingToast({ message: 'Resume duplicated.', type: 'success' })
+    } catch {
+      saveLandingToast({
+        message: 'We could not duplicate your resume. Please try again.',
+        type: 'error',
+      })
+    } finally {
+      setIsDuplicating(false)
+    }
   }
 
   return (
@@ -34,7 +51,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
             </summary>
             <ul className="dropdown-content menu z-40 w-40 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
               <li>
-                <button type="button" onClick={() => showUnavailable('Rename')}>
+                <button type="button" onClick={() => setDialog('rename')}>
                   <Pencil size={15} aria-hidden="true" />
                   Rename
                 </button>
@@ -42,7 +59,8 @@ export function ResumeCard({ resume }: ResumeCardProps) {
               <li>
                 <button
                   type="button"
-                  onClick={() => showUnavailable('Duplicate')}
+                  onClick={() => void duplicate()}
+                  disabled={isDuplicating}
                 >
                   <Copy size={15} aria-hidden="true" />
                   Duplicate
@@ -52,7 +70,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
                 <button
                   type="button"
                   className="text-error"
-                  onClick={() => showUnavailable('Delete')}
+                  onClick={() => setDialog('delete')}
                 >
                   <Trash2 size={15} aria-hidden="true" />
                   Delete
@@ -66,22 +84,51 @@ export function ResumeCard({ resume }: ResumeCardProps) {
             {resume.title}
           </h3>
           <p className="mt-1 text-sm text-base-content/60">
-            Updated {resume.updatedAt}
+            Updated {formatRelativeDate(resume.updatedAt)}
           </p>
         </div>
         <div className="card-actions items-center justify-between">
           <span className="badge badge-soft badge-warning">
             {resume.status}
           </span>
-          <button
+          <Link
             className="btn btn-sm"
-            type="button"
-            onClick={() => showUnavailable('Editing')}
+            to="/app/resumes/$resumeId/edit"
+            params={{ resumeId: resume.id }}
           >
             Continue editing
-          </button>
+          </Link>
         </div>
       </div>
+      {dialog && (
+        <ResumeDialog
+          mode={dialog}
+          resume={resume}
+          onClose={() => setDialog(null)}
+          onSuccess={() => {
+            setDialog(null)
+            void router.invalidate()
+            saveLandingToast({
+              message:
+                dialog === 'rename' ? 'Resume renamed.' : 'Resume deleted.',
+              type: 'success',
+            })
+          }}
+        />
+      )}
     </article>
   )
+}
+
+function formatRelativeDate(value: string) {
+  const seconds = Math.max(
+    0,
+    Math.round((Date.now() - new Date(value).getTime()) / 1000),
+  )
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  const days = Math.floor(minutes / 1440)
+  if (days === 1) return 'yesterday'
+  return `${days} days ago`
 }

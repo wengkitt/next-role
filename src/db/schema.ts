@@ -1,4 +1,10 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
 
 export const user = sqliteTable('user', {
   id: text('id').primaryKey(),
@@ -55,3 +61,46 @@ export const verification = sqliteTable('verification', {
   createdAt: integer('created_at', { mode: 'timestamp_ms' }),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }),
 })
+
+export const resumes = sqliteTable(
+  'resumes',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    status: text('status', { enum: ['draft', 'complete', 'archived'] })
+      .notNull()
+      .default('draft'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    index('resumes_user_id_idx').on(table.userId),
+    index('resumes_user_updated_at_idx').on(table.userId, table.updatedAt),
+  ],
+)
+
+export const resumeProfiles = sqliteTable(
+  'resume_profiles',
+  {
+    id: text('id').primaryKey(),
+    resumeId: text('resume_id')
+      .notNull()
+      .references(() => resumes.id, { onDelete: 'cascade' }),
+    fullName: text('full_name'),
+    professionalTitle: text('professional_title'),
+    email: text('email'),
+    phone: text('phone'),
+    location: text('location'),
+    website: text('website'),
+    linkedinUrl: text('linkedin_url'),
+    githubUrl: text('github_url'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('resume_profiles_resume_id_unique').on(table.resumeId),
+  ],
+)

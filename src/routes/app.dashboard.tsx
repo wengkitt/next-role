@@ -5,21 +5,11 @@ import {
   ResumeEmptyState,
   ResumeGrid,
 } from '#/components/dashboard/DashboardStates'
-import { auth } from '#/auth'
-import { getResumeSummariesForUser } from '#/data/resumes'
+import { getResumeSummaries } from '#/data/resumes'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
-
-const getDashboardData = createServerFn({ method: 'GET' }).handler(async () => {
-  const session = await auth.api.getSession({ headers: getRequestHeaders() })
-  if (!session) throw new Error('Unauthorized dashboard data request')
-
-  return { resumes: await getResumeSummariesForUser(session.user.id) }
-})
 
 export const Route = createFileRoute('/app/dashboard')({
-  loader: () => getDashboardData(),
+  loader: async () => ({ resumes: await getResumeSummaries() }),
   pendingComponent: DashboardLoading,
   errorComponent: DashboardRouteError,
   component: DashboardPage,
