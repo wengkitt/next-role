@@ -1,9 +1,16 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
   createResumeSchema,
+  deleteEntrySchema,
+  educationSchema,
   profileSchema,
+  projectSchema,
+  reorderSchema,
   renameResumeSchema,
   resumeActionSchema,
+  skillSchema,
+  summarySchema,
+  workExperienceSchema,
 } from './resume-schemas'
 
 export type ResumeSummary = {
@@ -23,6 +30,43 @@ export type ResumeProfile = {
   website: string
   linkedinUrl: string
   githubUrl: string
+}
+
+export type ResumeSummaryContent = { content: string }
+export type WorkExperience = {
+  id: string
+  jobTitle: string
+  company: string
+  location: string
+  startDate: string
+  endDate: string
+  isCurrent: boolean
+  description: string
+  sortOrder: number
+}
+export type EducationEntry = {
+  id: string
+  institution: string
+  qualification: string
+  fieldOfStudy: string
+  location: string
+  startDate: string
+  endDate: string
+  description: string
+  sortOrder: number
+}
+export type ResumeSkill = { id: string; name: string; sortOrder: number }
+export type ResumeProject = {
+  id: string
+  name: string
+  role: string
+  description: string
+  technologies: string
+  projectUrl: string
+  repositoryUrl: string
+  startDate: string
+  endDate: string
+  sortOrder: number
 }
 
 async function requireUser() {
@@ -154,12 +198,23 @@ export const getResumeEditorData = createServerFn({ method: 'GET' })
   .validator(resumeActionSchema)
   .handler(async ({ data }) => {
     const user = await requireUser()
-    const [{ and, eq }, { db }, { resumeProfiles, resumes }] =
-      await Promise.all([
-        import('drizzle-orm'),
-        import('#/db'),
-        import('#/db/schema'),
-      ])
+    const [
+      { and, asc, eq },
+      { db },
+      {
+        educationEntries,
+        resumeProfiles,
+        resumeProjects,
+        resumeSkills,
+        resumeSummaries,
+        resumes,
+        workExperiences,
+      },
+    ] = await Promise.all([
+      import('drizzle-orm'),
+      import('#/db'),
+      import('#/db/schema'),
+    ])
     const resume = await db
       .select()
       .from(resumes)
@@ -171,6 +226,37 @@ export const getResumeEditorData = createServerFn({ method: 'GET' })
       .from(resumeProfiles)
       .where(eq(resumeProfiles.resumeId, resume.id))
       .get()
+    const [summary, work, education, skills, projects] = await Promise.all([
+      db
+        .select()
+        .from(resumeSummaries)
+        .where(eq(resumeSummaries.resumeId, resume.id))
+        .get(),
+      db
+        .select()
+        .from(workExperiences)
+        .where(eq(workExperiences.resumeId, resume.id))
+        .orderBy(asc(workExperiences.sortOrder))
+        .all(),
+      db
+        .select()
+        .from(educationEntries)
+        .where(eq(educationEntries.resumeId, resume.id))
+        .orderBy(asc(educationEntries.sortOrder))
+        .all(),
+      db
+        .select()
+        .from(resumeSkills)
+        .where(eq(resumeSkills.resumeId, resume.id))
+        .orderBy(asc(resumeSkills.sortOrder))
+        .all(),
+      db
+        .select()
+        .from(resumeProjects)
+        .where(eq(resumeProjects.resumeId, resume.id))
+        .orderBy(asc(resumeProjects.sortOrder))
+        .all(),
+    ])
     return {
       resume: toSummary(resume),
       profile: {
@@ -183,6 +269,13 @@ export const getResumeEditorData = createServerFn({ method: 'GET' })
         linkedinUrl: profile?.linkedinUrl ?? '',
         githubUrl: profile?.githubUrl ?? '',
       } satisfies ResumeProfile,
+      summary: {
+        content: summary?.content ?? '',
+      } satisfies ResumeSummaryContent,
+      workExperiences: work.map(workResult),
+      educationEntries: education.map(educationResult),
+      skills,
+      projects: projects.map(projectResult),
     }
   })
 
@@ -247,3 +340,422 @@ export const saveResumeProfile = createServerFn({ method: 'POST' })
       updatedAt: now.toISOString(),
     }
   })
+
+async function requireOwnedResume(resumeId: string, userId: string) {
+  const [{ and, eq }, { db }, { resumes }] = await Promise.all([
+    import('drizzle-orm'),
+    import('#/db'),
+    import('#/db/schema'),
+  ])
+  const resume = await db
+    .select({ id: resumes.id })
+    .from(resumes)
+    .where(and(eq(resumes.id, resumeId), eq(resumes.userId, userId)))
+    .get()
+  if (!resume) throw new Error('Resume not found')
+  return resume
+}
+
+async function touchResume(resumeId: string, userId: string, now = new Date()) {
+  const [{ and, eq }, { db }, { resumes }] = await Promise.all([
+    import('drizzle-orm'),
+    import('#/db'),
+    import('#/db/schema'),
+  ])
+  await db
+    .update(resumes)
+    .set({ updatedAt: now })
+    .where(and(eq(resumes.id, resumeId), eq(resumes.userId, userId)))
+  return now
+}
+
+const nullable = (value: string | undefined) => value || null
+
+export const saveProfessionalSummary = createServerFn({ method: 'POST' })
+  .validator(summarySchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    await requireOwnedResume(data.resumeId, user.id)
+    const [{ eq }, { db }, { resumeSummaries }] = await Promise.all([
+      import('drizzle-orm'),
+      import('#/db'),
+      import('#/db/schema'),
+    ])
+    const now = new Date()
+    const current = await db
+      .select({ id: resumeSummaries.id })
+      .from(resumeSummaries)
+      .where(eq(resumeSummaries.resumeId, data.resumeId))
+      .get()
+    if (current)
+      await db
+        .update(resumeSummaries)
+        .set({ content: data.content, updatedAt: now })
+        .where(eq(resumeSummaries.id, current.id))
+    else
+      await db.insert(resumeSummaries).values({
+        id: crypto.randomUUID(),
+        resumeId: data.resumeId,
+        content: data.content,
+        createdAt: now,
+        updatedAt: now,
+      })
+    await touchResume(data.resumeId, user.id, now)
+    return { content: data.content, updatedAt: now.toISOString() }
+  })
+
+function workResult(row: any): WorkExperience {
+  return {
+    ...row,
+    location: row.location ?? '',
+    endDate: row.endDate ?? '',
+    description: row.description ?? '',
+  }
+}
+function educationResult(row: any): EducationEntry {
+  return {
+    ...row,
+    fieldOfStudy: row.fieldOfStudy ?? '',
+    location: row.location ?? '',
+    startDate: row.startDate ?? '',
+    endDate: row.endDate ?? '',
+    description: row.description ?? '',
+  }
+}
+function projectResult(row: any): ResumeProject {
+  return {
+    ...row,
+    role: row.role ?? '',
+    description: row.description ?? '',
+    technologies: row.technologies ?? '',
+    projectUrl: row.projectUrl ?? '',
+    repositoryUrl: row.repositoryUrl ?? '',
+    startDate: row.startDate ?? '',
+    endDate: row.endDate ?? '',
+  }
+}
+
+export const saveWorkExperience = createServerFn({ method: 'POST' })
+  .validator(workExperienceSchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    await requireOwnedResume(data.resumeId, user.id)
+    const [{ and, asc, eq, sql }, { db }, { workExperiences }] =
+      await Promise.all([
+        import('drizzle-orm'),
+        import('#/db'),
+        import('#/db/schema'),
+      ])
+    const now = new Date()
+    const values = {
+      jobTitle: data.jobTitle,
+      company: data.company,
+      location: nullable(data.location),
+      startDate: data.startDate,
+      endDate: data.isCurrent ? null : nullable(data.endDate),
+      isCurrent: data.isCurrent,
+      description: nullable(data.description),
+      updatedAt: now,
+    }
+    let row
+    if (data.id) {
+      row = (
+        await db
+          .update(workExperiences)
+          .set(values)
+          .where(
+            and(
+              eq(workExperiences.id, data.id),
+              eq(workExperiences.resumeId, data.resumeId),
+            ),
+          )
+          .returning()
+      )[0]
+      if (!row) throw new Error('Work experience not found')
+    } else {
+      const last = await db
+        .select({ sortOrder: workExperiences.sortOrder })
+        .from(workExperiences)
+        .where(eq(workExperiences.resumeId, data.resumeId))
+        .orderBy(asc(workExperiences.sortOrder))
+        .all()
+      row = (
+        await db
+          .insert(workExperiences)
+          .values({
+            id: crypto.randomUUID(),
+            resumeId: data.resumeId,
+            ...values,
+            sortOrder: last.length,
+            createdAt: now,
+          })
+          .returning()
+      )[0]
+    }
+    await touchResume(data.resumeId, user.id, now)
+    return workResult(row)
+  })
+
+export const saveEducationEntry = createServerFn({ method: 'POST' })
+  .validator(educationSchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    await requireOwnedResume(data.resumeId, user.id)
+    const [{ and, asc, eq }, { db }, { educationEntries }] = await Promise.all([
+      import('drizzle-orm'),
+      import('#/db'),
+      import('#/db/schema'),
+    ])
+    const now = new Date()
+    const values = {
+      institution: data.institution,
+      qualification: data.qualification,
+      fieldOfStudy: nullable(data.fieldOfStudy),
+      location: nullable(data.location),
+      startDate: nullable(data.startDate),
+      endDate: nullable(data.endDate),
+      description: nullable(data.description),
+      updatedAt: now,
+    }
+    let row
+    if (data.id) {
+      row = (
+        await db
+          .update(educationEntries)
+          .set(values)
+          .where(
+            and(
+              eq(educationEntries.id, data.id),
+              eq(educationEntries.resumeId, data.resumeId),
+            ),
+          )
+          .returning()
+      )[0]
+      if (!row) throw new Error('Education entry not found')
+    } else {
+      const existing = await db
+        .select({ id: educationEntries.id })
+        .from(educationEntries)
+        .where(eq(educationEntries.resumeId, data.resumeId))
+        .orderBy(asc(educationEntries.sortOrder))
+        .all()
+      row = (
+        await db
+          .insert(educationEntries)
+          .values({
+            id: crypto.randomUUID(),
+            resumeId: data.resumeId,
+            ...values,
+            sortOrder: existing.length,
+            createdAt: now,
+          })
+          .returning()
+      )[0]
+    }
+    await touchResume(data.resumeId, user.id, now)
+    return educationResult(row)
+  })
+
+export const saveResumeProject = createServerFn({ method: 'POST' })
+  .validator(projectSchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    await requireOwnedResume(data.resumeId, user.id)
+    const [{ and, asc, eq }, { db }, { resumeProjects }] = await Promise.all([
+      import('drizzle-orm'),
+      import('#/db'),
+      import('#/db/schema'),
+    ])
+    const now = new Date()
+    const technologies = data.technologies
+      ? data.technologies
+          .split(',')
+          .map((v) => v.trim())
+          .filter(Boolean)
+          .join(', ')
+      : null
+    const values = {
+      name: data.name,
+      role: nullable(data.role),
+      description: nullable(data.description),
+      technologies,
+      projectUrl: nullable(data.projectUrl),
+      repositoryUrl: nullable(data.repositoryUrl),
+      startDate: nullable(data.startDate),
+      endDate: nullable(data.endDate),
+      updatedAt: now,
+    }
+    let row
+    if (data.id) {
+      row = (
+        await db
+          .update(resumeProjects)
+          .set(values)
+          .where(
+            and(
+              eq(resumeProjects.id, data.id),
+              eq(resumeProjects.resumeId, data.resumeId),
+            ),
+          )
+          .returning()
+      )[0]
+      if (!row) throw new Error('Project not found')
+    } else {
+      const existing = await db
+        .select({ id: resumeProjects.id })
+        .from(resumeProjects)
+        .where(eq(resumeProjects.resumeId, data.resumeId))
+        .orderBy(asc(resumeProjects.sortOrder))
+        .all()
+      row = (
+        await db
+          .insert(resumeProjects)
+          .values({
+            id: crypto.randomUUID(),
+            resumeId: data.resumeId,
+            ...values,
+            sortOrder: existing.length,
+            createdAt: now,
+          })
+          .returning()
+      )[0]
+    }
+    await touchResume(data.resumeId, user.id, now)
+    return projectResult(row)
+  })
+
+export const createResumeSkill = createServerFn({ method: 'POST' })
+  .validator(skillSchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    await requireOwnedResume(data.resumeId, user.id)
+    const [{ asc, eq, sql }, { db }, { resumeSkills }] = await Promise.all([
+      import('drizzle-orm'),
+      import('#/db'),
+      import('#/db/schema'),
+    ])
+    const existing = await db
+      .select()
+      .from(resumeSkills)
+      .where(eq(resumeSkills.resumeId, data.resumeId))
+      .orderBy(asc(resumeSkills.sortOrder))
+      .all()
+    if (
+      existing.some(
+        (skill) =>
+          skill.name.toLocaleLowerCase() === data.name.toLocaleLowerCase(),
+      )
+    )
+      throw new Error('That skill is already on this resume.')
+    const now = new Date()
+    const row = (
+      await db
+        .insert(resumeSkills)
+        .values({
+          id: crypto.randomUUID(),
+          resumeId: data.resumeId,
+          name: data.name,
+          sortOrder: existing.length,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning()
+    )[0]
+    await touchResume(data.resumeId, user.id, now)
+    return row
+  })
+
+function deleteSectionEntry(
+  key:
+    | 'workExperiences'
+    | 'educationEntries'
+    | 'resumeProjects'
+    | 'resumeSkills',
+) {
+  return createServerFn({ method: 'POST' })
+    .validator(deleteEntrySchema)
+    .handler(async ({ data }) => {
+      const user = await requireUser()
+      await requireOwnedResume(data.resumeId, user.id)
+      const [{ and, eq }, { db }, schema] = await Promise.all([
+        import('drizzle-orm'),
+        import('#/db'),
+        import('#/db/schema'),
+      ])
+      const table: any = schema[key]
+      const row = await db
+        .delete(table)
+        .where(and(eq(table.id, data.id), eq(table.resumeId, data.resumeId)))
+        .returning({ id: table.id })
+      if (!row[0]) throw new Error('Entry not found')
+      await touchResume(data.resumeId, user.id)
+    })
+}
+export const deleteWorkExperience = createServerFn({ method: 'POST' })
+  .validator(deleteEntrySchema)
+  .handler(({ data }) => deleteSectionEntry('workExperiences')({ data } as any))
+export const deleteEducationEntry = createServerFn({ method: 'POST' })
+  .validator(deleteEntrySchema)
+  .handler(({ data }) =>
+    deleteSectionEntry('educationEntries')({ data } as any),
+  )
+export const deleteResumeProject = createServerFn({ method: 'POST' })
+  .validator(deleteEntrySchema)
+  .handler(({ data }) => deleteSectionEntry('resumeProjects')({ data } as any))
+export const deleteResumeSkill = createServerFn({ method: 'POST' })
+  .validator(deleteEntrySchema)
+  .handler(({ data }) => deleteSectionEntry('resumeSkills')({ data } as any))
+
+function reorderSection(
+  key:
+    | 'workExperiences'
+    | 'educationEntries'
+    | 'resumeProjects'
+    | 'resumeSkills',
+) {
+  return createServerFn({ method: 'POST' })
+    .validator(reorderSchema)
+    .handler(async ({ data }) => {
+      const user = await requireUser()
+      await requireOwnedResume(data.resumeId, user.id)
+      const [{ and, asc, eq }, { db }, schema] = await Promise.all([
+        import('drizzle-orm'),
+        import('#/db'),
+        import('#/db/schema'),
+      ])
+      const table: any = schema[key]
+      const rows = await db
+        .select({ id: table.id })
+        .from(table)
+        .where(eq(table.resumeId, data.resumeId))
+        .orderBy(asc(table.sortOrder))
+        .all()
+      if (
+        rows.length !== data.ids.length ||
+        rows.some((row) => !data.ids.includes(row.id))
+      )
+        throw new Error('Unable to reorder entries.')
+      const now = new Date()
+      await db.batch(
+        data.ids.map((id, sortOrder) =>
+          db
+            .update(table)
+            .set({ sortOrder, updatedAt: now })
+            .where(and(eq(table.id, id), eq(table.resumeId, data.resumeId))),
+        ),
+      )
+      await touchResume(data.resumeId, user.id, now)
+    })
+}
+export const reorderWorkExperiences = createServerFn({ method: 'POST' })
+  .validator(reorderSchema)
+  .handler(({ data }) => reorderSection('workExperiences')({ data } as any))
+export const reorderEducationEntries = createServerFn({ method: 'POST' })
+  .validator(reorderSchema)
+  .handler(({ data }) => reorderSection('educationEntries')({ data } as any))
+export const reorderResumeProjects = createServerFn({ method: 'POST' })
+  .validator(reorderSchema)
+  .handler(({ data }) => reorderSection('resumeProjects')({ data } as any))
+export const reorderResumeSkills = createServerFn({ method: 'POST' })
+  .validator(reorderSchema)
+  .handler(({ data }) => reorderSection('resumeSkills')({ data } as any))
