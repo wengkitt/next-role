@@ -252,7 +252,7 @@ export function ResumeEditor({
       />
     )
   return (
-    <main className="min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8">
+    <main className="resume-editor-main min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 xl:h-[calc(100vh-4rem)] xl:overflow-hidden">
       <div className="mx-auto max-w-[1600px]">
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-base-300 pb-5">
           <div>
@@ -344,7 +344,7 @@ export function ResumeEditor({
             </div>
           </section>
           <section
-            className={`${showPreview ? '' : 'hidden'} xl:sticky xl:top-6 xl:block xl:self-start`}
+            className={`${showPreview ? '' : 'hidden'} xl:sticky xl:top-6 xl:block xl:min-h-0 xl:self-start`}
           >
             <div className="mb-3 flex items-center justify-between px-1">
               <div>

@@ -38,6 +38,13 @@ body {
   gap: 1rem;
 }
 
+@media (min-width: 1280px) {
+  .resume-preview-shell {
+    height: calc(100vh - 18rem);
+    max-height: none;
+  }
+}
+
 .resume-template {
   color: #111;
   font-family: Arial, Helvetica, sans-serif;
