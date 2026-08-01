@@ -16,7 +16,7 @@ import type { ReactNode } from 'react'
 
 export const Route = createFileRoute('/sign-up')({
   beforeLoad: async () => {
-    if (await getAuthSession()) throw redirect({ to: '/app/dashboard' })
+    if (await getAuthSession()) throw redirect({ to: '/app/resumes' })
   },
   component: SignUpPage,
 })
@@ -41,7 +41,7 @@ function SignUpPage() {
         )
         return
       }
-      navigate({ to: '/app/dashboard' })
+      navigate({ to: '/app/resumes' })
     },
   })
 

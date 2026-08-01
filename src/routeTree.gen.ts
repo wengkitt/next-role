@@ -14,10 +14,10 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as AppIndexRouteImport } from './routes/app.index'
-import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
 import { Route as AppResumesRouteImport } from './routes/app.resumes'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AppResumesIndexRouteImport } from './routes/app.resumes.index'
 import { Route as AppResumesResumeIdEditRouteImport } from './routes/app.resumes.$resumeId.edit'
 
 const IndexRoute = IndexRouteImport.update({
@@ -45,11 +45,6 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppResumesRoute = AppResumesRouteImport.update({
   id: '/resumes',
   path: '/resumes',
@@ -65,6 +60,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppResumesIndexRoute = AppResumesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppResumesRoute,
+} as any)
 const AppResumesResumeIdEditRoute = AppResumesResumeIdEditRouteImport.update({
   id: '/$resumeId/edit',
   path: '/$resumeId/edit',
@@ -76,22 +76,21 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/app/dashboard': typeof AppDashboardRoute
   '/app/resumes': typeof AppResumesRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/app/resumes/': typeof AppResumesIndexRoute
   '/app/resumes/$resumeId/edit': typeof AppResumesResumeIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/app/dashboard': typeof AppDashboardRoute
-  '/app/resumes': typeof AppResumesRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/app/resumes': typeof AppResumesIndexRoute
   '/app/resumes/$resumeId/edit': typeof AppResumesResumeIdEditRoute
 }
 export interface FileRoutesById {
@@ -100,11 +99,11 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/app/dashboard': typeof AppDashboardRoute
   '/app/resumes': typeof AppResumesRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/app/resumes/': typeof AppResumesIndexRoute
   '/app/resumes/$resumeId/edit': typeof AppResumesResumeIdEditRoute
 }
 export interface FileRouteTypes {
@@ -114,22 +113,21 @@ export interface FileRouteTypes {
     | '/app'
     | '/sign-in'
     | '/sign-up'
-    | '/app/dashboard'
     | '/app/resumes'
     | '/app/settings'
     | '/app/'
     | '/api/auth/$'
+    | '/app/resumes/'
     | '/app/resumes/$resumeId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/sign-in'
     | '/sign-up'
-    | '/app/dashboard'
-    | '/app/resumes'
     | '/app/settings'
     | '/app'
     | '/api/auth/$'
+    | '/app/resumes'
     | '/app/resumes/$resumeId/edit'
   id:
     | '__root__'
@@ -137,11 +135,11 @@ export interface FileRouteTypes {
     | '/app'
     | '/sign-in'
     | '/sign-up'
-    | '/app/dashboard'
     | '/app/resumes'
     | '/app/settings'
     | '/app/'
     | '/api/auth/$'
+    | '/app/resumes/'
     | '/app/resumes/$resumeId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -190,13 +188,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/dashboard': {
-      id: '/app/dashboard'
-      path: '/dashboard'
-      fullPath: '/app/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/app/resumes': {
       id: '/app/resumes'
       path: '/resumes'
@@ -218,6 +209,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/resumes/': {
+      id: '/app/resumes/'
+      path: '/'
+      fullPath: '/app/resumes/'
+      preLoaderRoute: typeof AppResumesIndexRouteImport
+      parentRoute: typeof AppResumesRoute
+    }
     '/app/resumes/$resumeId/edit': {
       id: '/app/resumes/$resumeId/edit'
       path: '/$resumeId/edit'
@@ -229,10 +227,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppResumesRouteChildren {
+  AppResumesIndexRoute: typeof AppResumesIndexRoute
   AppResumesResumeIdEditRoute: typeof AppResumesResumeIdEditRoute
 }
 
 const AppResumesRouteChildren: AppResumesRouteChildren = {
+  AppResumesIndexRoute: AppResumesIndexRoute,
   AppResumesResumeIdEditRoute: AppResumesResumeIdEditRoute,
 }
 
@@ -241,14 +241,12 @@ const AppResumesRouteWithChildren = AppResumesRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
-  AppDashboardRoute: typeof AppDashboardRoute
   AppResumesRoute: typeof AppResumesRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppDashboardRoute: AppDashboardRoute,
   AppResumesRoute: AppResumesRouteWithChildren,
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,

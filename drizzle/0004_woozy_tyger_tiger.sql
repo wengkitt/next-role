@@ -1,0 +1,1 @@
+ALTER TABLE `resumes` ADD `template_id` text DEFAULT 'classic' NOT NULL;

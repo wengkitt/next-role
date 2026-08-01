@@ -54,8 +54,8 @@ function ResumeNotFound() {
             The resume may have been deleted or you may not have permission to
             access it.
           </p>
-          <Link to="/app/dashboard" className="btn mt-2">
-            Back to Dashboard
+          <Link to="/app/resumes" className="btn mt-2">
+            Back to Resumes
           </Link>
         </div>
       </section>

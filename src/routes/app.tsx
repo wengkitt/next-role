@@ -19,7 +19,7 @@ export const Route = createFileRoute('/app')({
 })
 
 const pageTitles: Record<string, string> = {
-  '/app/dashboard': 'Dashboard',
+  '/app/resumes': 'Resumes',
   '/app/resumes': 'Resumes',
   '/app/settings': 'Settings',
 }
