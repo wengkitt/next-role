@@ -1,4 +1,6 @@
 import { saveLandingToast } from '#/components/LandingToast'
+import { normalizeResume } from '#/lib/resume-normalizer'
+import { getResumeTemplate, resumeTemplates } from '#/resume-templates/registry'
 import { ResumeDialog } from '#/components/resumes/ResumeDialogs'
 import { profileSchema, summarySchema } from '#/data/resume-schemas'
 import {
@@ -14,6 +16,7 @@ import {
   saveEducationEntry,
   saveProfessionalSummary,
   saveResumeProfile,
+  saveResumeTemplate,
   saveResumeProject,
   saveWorkExperience,
 } from '#/data/resumes'
@@ -31,18 +34,19 @@ import {
   ArrowLeft,
   ArrowUp,
   BriefcaseBusiness,
-  ChevronRight,
   Eye,
   FileText,
+  FolderKanban,
   GraduationCap,
   Pencil,
   Plus,
   Save,
+  SlidersHorizontal,
   Sparkles,
   Trash2,
   UserRound,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 const fields: { key: keyof ProfileValues; label: string; type?: string }[] = [
   { key: 'fullName', label: 'Full name' },
@@ -61,6 +65,7 @@ type Section =
   | 'education'
   | 'skills'
   | 'projects'
+  | 'settings'
 export function ResumeEditor({
   resume,
   profile,
@@ -90,6 +95,8 @@ export function ResumeEditor({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [renameOpen, setRenameOpen] = useState(false)
+  const [templateId, setTemplateId] = useState(resume.templateId)
+  const [isExporting, setIsExporting] = useState(false)
   const message = (text: string) =>
     saveLandingToast({ message: text, type: 'success' })
   async function profileSave() {
@@ -128,11 +135,93 @@ export function ResumeEditor({
       setSaving(false)
     }
   }
+  async function chooseTemplate(nextTemplateId: typeof templateId) {
+    if (nextTemplateId === templateId) return
+    const previous = templateId
+    setTemplateId(nextTemplateId)
+    try {
+      await saveResumeTemplate({
+        data: { resumeId: resume.id, templateId: nextTemplateId },
+      })
+      message('Template selected.')
+      await router.invalidate()
+    } catch {
+      setTemplateId(previous)
+      setError('Unable to save template selection.')
+    }
+  }
+  async function exportPdf() {
+    if (isExporting) return
+    const sourcePages = Array.from(
+      document.querySelectorAll<HTMLElement>('.resume-pages .resume-page'),
+    )
+    if (!sourcePages.length) {
+      saveLandingToast({
+        message: 'Unable to prepare the resume for export.',
+        type: 'error',
+      })
+      return
+    }
+    setIsExporting(true)
+    const source = values.fullName || resume.title
+    const filename = `${source
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')}-resume.pdf`
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ])
+      const pdf = new jsPDF({
+        format: 'a4',
+        orientation: 'portrait',
+        unit: 'mm',
+      })
+      for (const [index, sourcePage] of sourcePages.entries()) {
+        const canvas = await html2canvas(sourcePage, {
+          backgroundColor: '#ffffff',
+          onclone: (clonedDocument) => {
+            for (const element of [
+              clonedDocument.documentElement,
+              clonedDocument.body,
+            ]) {
+              element.style.setProperty(
+                'background-color',
+                '#ffffff',
+                'important',
+              )
+              element.style.setProperty('color', '#111111', 'important')
+            }
+          },
+          scale: 2,
+          useCORS: true,
+        })
+        if (index) pdf.addPage()
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297)
+      }
+      pdf.save(filename)
+      saveLandingToast({
+        message: 'Your PDF download has started.',
+        type: 'success',
+      })
+    } catch {
+      saveLandingToast({
+        message: 'Unable to create the PDF. Please try again.',
+        type: 'error',
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }
   const content =
     section === 'profile' ? (
       <Profile values={values} setValues={setValues} />
     ) : section === 'summary' ? (
       <Summary text={summaryText} setText={setSummaryText} />
+    ) : section === 'settings' ? (
+      <TemplateSelector active={templateId} onSelect={chooseTemplate} />
     ) : section === 'skills' ? (
       <Skills
         resumeId={resume.id}
@@ -142,6 +231,7 @@ export function ResumeEditor({
       />
     ) : (
       <Entries
+        key={section}
         kind={section}
         resumeId={resume.id}
         items={
@@ -166,7 +256,7 @@ export function ResumeEditor({
       <div className="mx-auto max-w-[1600px]">
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-base-300 pb-5">
           <div>
-            <Link to="/app/dashboard" className="btn btn-ghost btn-sm -ml-3">
+            <Link to="/app/resumes" className="btn btn-ghost btn-sm -ml-3">
               <ArrowLeft size={16} />
               Back to resumes
             </Link>
@@ -184,12 +274,26 @@ export function ResumeEditor({
               <Eye size={15} />
               {showPreview ? 'Edit' : 'Preview'}
             </button>
+            <button
+              className="btn btn-sm"
+              aria-label="Export resume as PDF"
+              onClick={exportPdf}
+              disabled={isExporting}
+            >
+              {isExporting && (
+                <span className="loading loading-spinner loading-sm" />
+              )}
+              {isExporting ? 'Preparing PDF...' : 'Export PDF'}
+            </button>
           </div>
         </header>
-        <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)_minmax(360px,.9fr)]">
+        <div className="grid items-start gap-5 xl:grid-cols-[200px_minmax(0,.9fr)_minmax(400px,1.25fr)]">
           <Navigation
             current={section}
-            setCurrent={setSection}
+            setCurrent={(nextSection: Section) => {
+              setSection(nextSection)
+              setError('')
+            }}
             complete={{
               profile: !!values.fullName,
               summary: !!summaryText,
@@ -197,6 +301,7 @@ export function ResumeEditor({
               education: !!education.length,
               skills: !!skillList.length,
               projects: !!projectList.length,
+              settings: false,
             }}
           />
           <section
@@ -238,15 +343,27 @@ export function ResumeEditor({
               )}
             </div>
           </section>
-          <section className={`${showPreview ? '' : 'hidden'} xl:block`}>
+          <section
+            className={`${showPreview ? '' : 'hidden'} xl:sticky xl:top-6 xl:block xl:self-start`}
+          >
+            <div className="mb-3 flex items-center justify-between px-1">
+              <div>
+                <h3 className="text-sm font-semibold">Live preview</h3>
+                <p className="text-xs text-base-content/60">
+                  Updates as you edit
+                </p>
+              </div>
+              <span className="badge badge-ghost badge-sm">A4</span>
+            </div>
             <Preview
-              title={resume.title}
+              resume={{ title: resume.title }}
               profile={values}
               summary={summaryText}
               work={work}
               education={education}
               skills={skillList}
               projects={projectList}
+              templateId={templateId}
             />
           </section>
         </div>
@@ -272,6 +389,7 @@ const labels: Record<Section, string> = {
   education: 'Education',
   skills: 'Skills',
   projects: 'Projects',
+  settings: 'Resume Settings',
 }
 function Navigation({
   current,
@@ -288,7 +406,8 @@ function Navigation({
     ['work', BriefcaseBusiness],
     ['education', GraduationCap],
     ['skills', FileText],
-    ['projects', ChevronRight],
+    ['projects', FolderKanban],
+    ['settings', SlidersHorizontal],
   ]
   return (
     <aside className="card h-fit border border-base-300 bg-base-100">
@@ -514,8 +633,8 @@ function Entries({ kind, resumeId, items, setItems, fail }: any) {
       )
       setForm(null)
       saveLandingToast({ message: 'Entry saved.', type: 'success' })
-    } catch (e: any) {
-      fail(e.message || 'Unable to save entry.')
+    } catch (e: unknown) {
+      fail(userFacingError(e, 'Unable to save entry.'))
     }
   }
   return (
@@ -623,6 +742,21 @@ function Entries({ kind, resumeId, items, setItems, fail }: any) {
     </>
   )
 }
+function userFacingError(error: unknown, fallback: string) {
+  if (!(error instanceof Error) || !error.message) return fallback
+  try {
+    const issues = JSON.parse(error.message)
+    if (Array.isArray(issues)) {
+      const firstMessage = issues.find(
+        (issue) => typeof issue?.message === 'string',
+      )?.message
+      if (firstMessage) return firstMessage
+    }
+  } catch {
+    // Server errors are usually already suitable for the user.
+  }
+  return error.message.startsWith('[{') ? fallback : error.message
+}
 function EntryForm({ kind, value, setValue, save }: any) {
   const names: any = {
     work: [
@@ -720,127 +854,136 @@ async function reorder(
     fail('Unable to reorder entries.')
   }
 }
-function Preview({
-  title,
-  profile,
-  summary,
-  work,
-  education,
-  skills,
-  projects,
-}: any) {
+function TemplateSelector({ active, onSelect }: any) {
   return (
-    <div className="rounded-box border border-base-300 bg-base-300 p-4">
-      <article className="mx-auto min-h-[842px] max-w-[595px] bg-white p-7 text-slate-800 shadow-xl sm:p-10">
-        <header className="border-b-2 border-slate-700 pb-4">
-          <h3 className="text-2xl font-bold">{profile.fullName || title}</h3>
-          {profile.professionalTitle && <p>{profile.professionalTitle}</p>}
-          <p className="mt-2 text-xs">
-            {[profile.email, profile.phone, profile.location]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-        </header>
-        {summary && (
-          <Block title="Professional Summary">
-            <p className="text-sm leading-6 whitespace-pre-wrap">{summary}</p>
-          </Block>
-        )}
-        {work.length > 0 && (
-          <Block title="Work Experience">
-            {work.map((v: any) => (
-              <div className="mb-3" key={v.id}>
-                <b>{v.jobTitle}</b>
-                <p className="text-sm">
-                  {[v.company, v.location].filter(Boolean).join(' · ')}
-                </p>
-                <p className="text-xs">
-                  {date(v.startDate)} –{' '}
-                  {v.isCurrent ? 'Present' : date(v.endDate)}
-                </p>
-                {v.description && (
-                  <ul className="mt-1 list-disc pl-4 text-sm">
-                    {v.description
-                      .split('\n')
-                      .filter(Boolean)
-                      .map((x: string) => (
-                        <li key={x}>{x}</li>
-                      ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </Block>
-        )}
-        {education.length > 0 && (
-          <Block title="Education">
-            {education.map((v: any) => (
-              <div className="mb-3" key={v.id}>
-                <b>{v.qualification}</b>
-                <p className="text-sm">
-                  {[v.institution, v.location].filter(Boolean).join(' · ')}
-                </p>
-                <p className="text-xs">
-                  {[date(v.startDate), date(v.endDate)]
-                    .filter(Boolean)
-                    .join(' – ')}
-                </p>
-              </div>
-            ))}
-          </Block>
-        )}
-        {skills.length > 0 && (
-          <Block title="Skills">
-            <p className="text-sm">
-              {skills.map((v: any) => v.name).join(' · ')}
-            </p>
-          </Block>
-        )}
-        {projects.length > 0 && (
-          <Block title="Projects">
-            {projects.map((v: any) => (
-              <div className="mb-3" key={v.id}>
-                <b>{v.name}</b>
-                {v.role && <p className="text-sm">{v.role}</p>}
-                {v.technologies && (
-                  <p className="text-xs">
-                    {v.technologies.split(',').join(' · ')}
-                  </p>
-                )}
-                {v.description && <p className="text-sm">{v.description}</p>}
-                {v.projectUrl && (
-                  <a
-                    className="link text-xs"
-                    href={v.projectUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Project link
-                  </a>
-                )}
-              </div>
-            ))}
-          </Block>
-        )}
-      </article>
+    <fieldset className="fieldset">
+      <legend className="fieldset-legend">Template</legend>
+      <p className="label mb-2">
+        Choose a template. Page size and margins use print-ready A4 defaults.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {resumeTemplates.map((template) => (
+          <button
+            key={template.id}
+            type="button"
+            className={`card card-border text-left ${active === template.id ? 'border-primary' : ''}`}
+            aria-pressed={active === template.id}
+            onClick={() => onSelect(template.id)}
+          >
+            <span
+              className={`block h-12 rounded-t-box ${template.id === 'classic' ? 'bg-base-300' : template.id === 'modern' ? 'bg-info/25' : 'bg-base-200'}`}
+            />
+            <span className="block p-3 text-sm font-semibold">
+              {template.displayName}
+              {active === template.id && (
+                <span className="badge badge-success badge-xs ml-2">
+                  Active
+                </span>
+              )}
+              <small className="mt-1 block font-normal text-base-content/60">
+                {template.description}
+              </small>
+            </span>
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+function Preview(props: any) {
+  const normalized = useMemo(
+    () => normalizeResume(props),
+    [
+      props.resume,
+      props.profile,
+      props.summary,
+      props.work,
+      props.education,
+      props.skills,
+      props.projects,
+    ],
+  )
+  const Template = getResumeTemplate(props.templateId).renderer
+  const pagesRef = useRef<HTMLDivElement>(null)
+  const sourceTemplateRef = useRef<{
+    key: string
+    template: HTMLElement
+  } | null>(null)
+  const paginationKey = JSON.stringify(normalized)
+  useLayoutEffect(() => {
+    const pages = pagesRef.current
+    const firstPage = pages?.querySelector<HTMLElement>('.resume-page')
+    const firstTemplate =
+      firstPage?.querySelector<HTMLElement>('.resume-template')
+    if (!pages || !firstPage || !firstTemplate) return
+    pages
+      .querySelectorAll('.resume-page:not(:first-child)')
+      .forEach((page) => page.remove())
+    if (sourceTemplateRef.current?.key === paginationKey) {
+      firstTemplate.replaceChildren(
+        ...Array.from(sourceTemplateRef.current.template.childNodes).map(
+          (node) => node.cloneNode(true),
+        ),
+      )
+    } else {
+      sourceTemplateRef.current = {
+        key: paginationKey,
+        template: firstTemplate.cloneNode(true) as HTMLElement,
+      }
+    }
+
+    const createPage = () => {
+      const page = firstPage.cloneNode(false) as HTMLElement
+      const template = firstTemplate.cloneNode(false) as HTMLElement
+      page.append(template)
+      pages.append(page)
+      return { page, template }
+    }
+    const splitLastSection = (page: HTMLElement, template: HTMLElement) => {
+      const sections = Array.from(
+        template.querySelectorAll<HTMLElement>(':scope > .resume-section'),
+      )
+      const section = sections.at(-1)
+      if (!section) return false
+      const next = createPage()
+      if (sections.length > 1) {
+        next.template.prepend(section)
+        return true
+      }
+
+      const sectionItems = Array.from(section.children).slice(1)
+      const item = sectionItems.at(-1)
+      if (!item) return false
+      const continuation = section.cloneNode(false) as HTMLElement
+      const heading = section.querySelector('h2')
+      if (heading) continuation.append(heading.cloneNode(true))
+      continuation.append(item)
+      next.template.append(continuation)
+      return true
+    }
+
+    const pageList = [firstPage]
+    for (const page of pageList) {
+      const template = page.querySelector<HTMLElement>('.resume-template')
+      if (!template) continue
+      while (page.scrollHeight > page.clientHeight) {
+        const existingPages = pages.querySelectorAll('.resume-page').length
+        if (existingPages > 12 || !splitLastSection(page, template)) break
+        const nextPage = pages.lastElementChild as HTMLElement
+        pageList.push(nextPage)
+      }
+    }
+  }, [paginationKey])
+  return (
+    <div className="resume-preview-shell rounded-box border border-base-300 bg-base-300 p-3 sm:p-4">
+      <div className="resume-pages" ref={pagesRef}>
+        <article
+          className="resume-page mx-auto bg-white shadow-xl"
+          key={paginationKey}
+        >
+          <Template resume={normalized} />
+        </article>
+      </div>
     </div>
   )
-}
-function Block({ title, children }: any) {
-  return (
-    <section className="mt-6">
-      <h4 className="mb-2 border-b border-slate-300 pb-1 text-sm font-bold tracking-wide uppercase">
-        {title}
-      </h4>
-      {children}
-    </section>
-  )
-}
-function date(v: string) {
-  return v
-    ? new Date(`${v}-01T00:00:00`).toLocaleDateString(undefined, {
-        month: 'long',
-        year: 'numeric',
-      })
-    : ''
 }

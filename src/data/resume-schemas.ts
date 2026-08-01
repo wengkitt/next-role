@@ -14,6 +14,10 @@ export const renameResumeSchema = z.object({
   title: resumeTitleSchema,
 })
 export const resumeActionSchema = z.object({ resumeId: resumeIdSchema })
+export const templateSchema = z.object({
+  resumeId: resumeIdSchema,
+  templateId: z.enum(['classic', 'modern', 'minimal']),
+})
 
 const optionalText = z.string().trim().max(200).optional()
 const optionalUrl = z

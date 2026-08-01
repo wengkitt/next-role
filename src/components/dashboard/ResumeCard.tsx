@@ -3,7 +3,7 @@ import { FileText, MoreHorizontal, Pencil, Copy, Trash2 } from 'lucide-react'
 import { saveLandingToast } from '#/components/LandingToast'
 import { duplicateResume } from '#/data/resumes'
 import { ResumeDialog } from '#/components/resumes/ResumeDialogs'
-import { Link, useRouter } from '@tanstack/react-router'
+import { Link, useNavigate, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import type { ResumeSummary } from '#/data/resumes'
 
@@ -13,15 +13,20 @@ type ResumeCardProps = {
 
 export function ResumeCard({ resume }: ResumeCardProps) {
   const router = useRouter()
+  const navigate = useNavigate()
   const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null)
   const [isDuplicating, setIsDuplicating] = useState(false)
   async function duplicate() {
     if (isDuplicating) return
     setIsDuplicating(true)
     try {
-      await duplicateResume({ data: { resumeId: resume.id } })
+      const copy = await duplicateResume({ data: { resumeId: resume.id } })
       await router.invalidate()
       saveLandingToast({ message: 'Resume duplicated.', type: 'success' })
+      await navigate({
+        to: '/app/resumes/$resumeId/edit',
+        params: { resumeId: copy.id },
+      })
     } catch {
       saveLandingToast({
         message: 'We could not duplicate your resume. Please try again.',
@@ -36,12 +41,14 @@ export function ResumeCard({ resume }: ResumeCardProps) {
     <article className="card border border-base-300 bg-base-100 transition-shadow motion-reduce:transition-none hover:shadow-md">
       <div className="card-body gap-4 p-5">
         <div className="flex items-start justify-between gap-3">
-          <div
+          <Link
             className="grid h-28 w-20 shrink-0 place-items-center rounded-field border border-base-300 bg-base-200 text-base-content/50"
-            aria-label="Resume preview unavailable"
+            aria-label={`Edit ${resume.title}`}
+            to="/app/resumes/$resumeId/edit"
+            params={{ resumeId: resume.id }}
           >
             <FileText size={28} aria-hidden="true" />
-          </div>
+          </Link>
           <details className="dropdown dropdown-end">
             <summary
               className="btn btn-ghost btn-sm btn-square"
@@ -81,7 +88,13 @@ export function ResumeCard({ resume }: ResumeCardProps) {
         </div>
         <div className="min-w-0">
           <h3 className="truncate font-semibold" title={resume.title}>
-            {resume.title}
+            <Link
+              className="focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+              to="/app/resumes/$resumeId/edit"
+              params={{ resumeId: resume.id }}
+            >
+              {resume.title}
+            </Link>
           </h3>
           <p className="mt-1 text-sm text-base-content/60">
             Updated {formatRelativeDate(resume.updatedAt)}

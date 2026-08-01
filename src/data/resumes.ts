@@ -10,6 +10,7 @@ import {
   resumeActionSchema,
   skillSchema,
   summarySchema,
+  templateSchema,
   workExperienceSchema,
 } from './resume-schemas'
 
@@ -17,6 +18,7 @@ export type ResumeSummary = {
   id: string
   title: string
   status: 'draft' | 'complete' | 'archived'
+  templateId: 'classic' | 'modern' | 'minimal'
   createdAt: string
   updatedAt: string
 }
@@ -83,12 +85,14 @@ const toSummary = (resume: {
   id: string
   title: string
   status: ResumeSummary['status']
+  templateId: ResumeSummary['templateId']
   createdAt: Date
   updatedAt: Date
 }): ResumeSummary => ({
   id: resume.id,
   title: resume.title,
   status: resume.status,
+  templateId: resume.templateId,
   createdAt: resume.createdAt.toISOString(),
   updatedAt: resume.updatedAt.toISOString(),
 })
@@ -124,6 +128,7 @@ export const createResume = createServerFn({ method: 'POST' })
       userId: user.id,
       title: data.title,
       status: 'draft' as const,
+      templateId: 'classic' as const,
       createdAt: now,
       updatedAt: now,
     }
@@ -144,6 +149,24 @@ export const renameResume = createServerFn({ method: 'POST' })
     const result = await db
       .update(resumes)
       .set({ title: data.title, updatedAt: now })
+      .where(and(eq(resumes.id, data.resumeId), eq(resumes.userId, user.id)))
+      .returning()
+    if (!result[0]) throw new Error('Resume not found')
+    return toSummary(result[0])
+  })
+
+export const saveResumeTemplate = createServerFn({ method: 'POST' })
+  .validator(templateSchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    const [{ and, eq }, { db }, { resumes }] = await Promise.all([
+      import('drizzle-orm'),
+      import('#/db'),
+      import('#/db/schema'),
+    ])
+    const result = await db
+      .update(resumes)
+      .set({ templateId: data.templateId, updatedAt: new Date() })
       .where(and(eq(resumes.id, data.resumeId), eq(resumes.userId, user.id)))
       .returning()
     if (!result[0]) throw new Error('Resume not found')
@@ -171,6 +194,7 @@ export const duplicateResume = createServerFn({ method: 'POST' })
       userId: user.id,
       title: `${source.title} Copy`,
       status: 'draft' as const,
+      templateId: source.templateId,
       createdAt: now,
       updatedAt: now,
     }

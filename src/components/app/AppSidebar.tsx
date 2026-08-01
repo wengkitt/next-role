@@ -1,10 +1,9 @@
-import { LayoutDashboard, Settings, FileText } from 'lucide-react'
+import { Settings, FileText } from 'lucide-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 
 import { UserMenu } from './UserMenu'
 
 const navigation = [
-  { to: '/app/dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
   { to: '/app/resumes' as const, label: 'Resumes', icon: FileText },
   { to: '/app/settings' as const, label: 'Settings', icon: Settings },
 ]
@@ -22,9 +21,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
     <aside className="flex min-h-full w-72 flex-col border-r border-base-300 bg-base-100">
       <div className="px-5 pt-6 pb-5">
         <Link
-          to="/app/dashboard"
+          to="/app/resumes"
           className="inline-flex items-center gap-2 text-xl font-bold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
-          aria-label="NextRole dashboard"
+          aria-label="NextRole resumes"
         >
           <span className="grid size-8 place-items-center rounded-box bg-primary text-sm font-black text-primary-content">
             N

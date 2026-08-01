@@ -14,7 +14,7 @@ import { useState } from 'react'
 
 export const Route = createFileRoute('/sign-in')({
   beforeLoad: async () => {
-    if (await getAuthSession()) throw redirect({ to: '/app/dashboard' })
+    if (await getAuthSession()) throw redirect({ to: '/app/resumes' })
   },
   component: SignInPage,
 })
@@ -34,7 +34,7 @@ function SignInPage() {
         )
         return
       }
-      navigate({ to: '/app/dashboard' })
+      navigate({ to: '/app/resumes' })
     },
   })
 

@@ -73,6 +73,11 @@ export const resumes = sqliteTable(
     status: text('status', { enum: ['draft', 'complete', 'archived'] })
       .notNull()
       .default('draft'),
+    templateId: text('template_id', {
+      enum: ['classic', 'modern', 'minimal'],
+    })
+      .notNull()
+      .default('classic'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
   },
