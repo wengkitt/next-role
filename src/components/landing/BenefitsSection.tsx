@@ -1,46 +1,60 @@
-import { Eye, LayoutTemplate, WandSparkles } from 'lucide-react'
+import { Eye, FileText, LayoutTemplate, Sparkles } from 'lucide-react'
 import { SectionHeading } from './SectionHeading'
 
 export function BenefitsSection() {
   const benefits = [
-    [
-      WandSparkles,
-      'Easy to Build',
-      'Guided resume sections help you organise your information without worrying about formatting.',
-    ],
-    [
-      LayoutTemplate,
-      'Professional Templates',
-      'Choose from clean resume layouts suitable for modern job applications.',
-    ],
-    [
-      Eye,
-      'Instant Preview',
-      'See changes immediately while editing your resume, so every detail stays in place.',
-    ],
+    {
+      icon: FileText,
+      eyebrow: '01',
+      title: 'Start with structure',
+      description:
+        'Guided sections make it easier to turn your experience into a complete, readable story.',
+    },
+    {
+      icon: Sparkles,
+      eyebrow: '02',
+      title: 'Improve with confidence',
+      description:
+        'Quality checks surface missing details, long sections, and places where impact could be clearer.',
+    },
+    {
+      icon: LayoutTemplate,
+      eyebrow: '03',
+      title: 'Choose your presentation',
+      description:
+        'Use Classic ATS, Modern ATS, or Minimal when you want a different visual starting point.',
+    },
+    {
+      icon: Eye,
+      eyebrow: '04',
+      title: 'Preview before you send',
+      description:
+        'See the same A4 document you will export, with selectable text and automatic page wrapping.',
+    },
   ]
   return (
-    <section className="bg-base-100 px-4 py-20 sm:px-6 lg:px-8">
+    <section id="benefits" className="bg-base-100 px-4 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <SectionHeading
-          eyebrow="Made for your momentum"
-          title="Everything you need to make a strong first impression."
-          description="A calmer way to turn your experience into a resume you are proud to send."
+          eyebrow="The important parts, covered"
+          title="A better way to move from experience to application."
+          description="NextRole gives you the structure, feedback, and presentation tools to make your resume easier to finish and easier to trust."
         />
-        <div className="grid gap-5 md:grid-cols-3">
-          {benefits.map(([Icon, title, description]) => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {benefits.map(({ icon: Icon, eyebrow, title, description }) => (
             <article
-              className="card card-border bg-base-100"
-              key={title as string}
+              className="card card-border bg-base-100 shadow-sm"
+              key={title}
             >
-              <div className="card-body gap-4">
-                <div className="flex size-11 items-center justify-center rounded-box bg-base-200 text-primary">
-                  <Icon size={22} aria-hidden="true" />
+              <div className="card-body gap-4 p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex size-11 items-center justify-center rounded-box bg-base-200 text-primary">
+                    <Icon size={22} aria-hidden="true" />
+                  </div>
+                  <span className="badge badge-ghost badge-sm">{eyebrow}</span>
                 </div>
-                <h3 className="card-title">{title as string}</h3>
-                <p className="leading-7 text-base-content/70">
-                  {description as string}
-                </p>
+                <h3 className="card-title text-lg">{title}</h3>
+                <p className="leading-7 text-base-content/70">{description}</p>
               </div>
             </article>
           ))}

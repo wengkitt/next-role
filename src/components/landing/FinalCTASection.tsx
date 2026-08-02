@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { ArrowRight, BriefcaseBusiness } from 'lucide-react'
 
 export function FinalCTASection() {
@@ -16,11 +17,11 @@ export function FinalCTASection() {
           Ready for your next role?
         </h2>
         <p className="mt-4 text-lg text-neutral-content/75">
-          Build a professional resume and start applying with confidence.
+          Start with your experience. Leave with a resume you are ready to send.
         </p>
-        <a href="#top" className="btn btn-primary btn-lg mt-8">
-          Create My Resume <ArrowRight size={18} aria-hidden="true" />
-        </a>
+        <Link to="/sign-up" className="btn btn-primary btn-lg mt-8">
+          Start building <ArrowRight size={18} aria-hidden="true" />
+        </Link>
       </div>
     </section>
   )

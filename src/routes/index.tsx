@@ -22,9 +22,9 @@ function Home() {
       <main>
         <HeroSection />
         <BenefitsSection />
-        <HowItWorksSection />
-        <TemplatesSection />
         <ProductPreviewSection />
+        <TemplatesSection />
+        <HowItWorksSection />
         <ResumeVersionsSection />
         <FinalCTASection />
       </main>
