@@ -46,7 +46,7 @@ import {
   Trash2,
   UserRound,
 } from 'lucide-react'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 const fields: { key: keyof ProfileValues; label: string; type?: string }[] = [
   { key: 'fullName', label: 'Full name' },
@@ -179,7 +179,8 @@ export function ResumeEditor({
         orientation: 'portrait',
         unit: 'mm',
       })
-      for (const [index, sourcePage] of sourcePages.entries()) {
+      let hasPdfPage = false
+      for (const sourcePage of sourcePages) {
         const canvas = await html2canvas(sourcePage, {
           backgroundColor: '#ffffff',
           onclone: (clonedDocument) => {
@@ -198,8 +199,27 @@ export function ResumeEditor({
           scale: 2,
           useCORS: true,
         })
-        if (index) pdf.addPage()
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297)
+        const pageHeight = Math.round((canvas.width * 297) / 210)
+        for (let offset = 0; offset < canvas.height; offset += pageHeight) {
+          const slice = document.createElement('canvas')
+          slice.width = canvas.width
+          slice.height = Math.min(pageHeight, canvas.height - offset)
+          const context = slice.getContext('2d')
+          if (!context) throw new Error('Unable to prepare PDF page')
+          context.fillStyle = '#ffffff'
+          context.fillRect(0, 0, slice.width, slice.height)
+          context.drawImage(canvas, 0, -offset)
+          if (hasPdfPage) pdf.addPage()
+          pdf.addImage(
+            slice.toDataURL('image/png'),
+            'PNG',
+            0,
+            0,
+            210,
+            (slice.height * 210) / slice.width,
+          )
+          hasPdfPage = true
+        }
       }
       pdf.save(filename)
       saveLandingToast({
@@ -435,27 +455,55 @@ function Navigation({
   )
 }
 function Profile({ values, setValues }: any) {
+  const renderFields = (items: typeof fields) =>
+    items.map((field) => (
+      <fieldset className="fieldset" key={field.key}>
+        <legend className="fieldset-legend">{field.label}</legend>
+        <input
+          className="input w-full"
+          type={field.type ?? 'text'}
+          value={values[field.key]}
+          onChange={(e) =>
+            setValues((v: any) => ({ ...v, [field.key]: e.target.value }))
+          }
+        />
+      </fieldset>
+    ))
   return (
-    <>
+    <div className="space-y-6">
       <p className="text-sm text-base-content/65">
-        Start with the details employers use to contact you.
+        Keep these details current so employers can reach you easily.
       </p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {fields.map((field) => (
-          <fieldset className="fieldset" key={field.key}>
-            <legend className="fieldset-legend">{field.label}</legend>
-            <input
-              className="input w-full"
-              type={field.type ?? 'text'}
-              value={values[field.key]}
-              onChange={(e) =>
-                setValues((v: any) => ({ ...v, [field.key]: e.target.value }))
-              }
-            />
-          </fieldset>
-        ))}
-      </div>
-    </>
+      <section aria-labelledby="contact-details-heading">
+        <div className="mb-3">
+          <h4 className="text-sm font-semibold" id="contact-details-heading">
+            Contact details
+          </h4>
+          <p className="mt-0.5 text-xs text-base-content/60">
+            Your name, role, and the best ways to contact you.
+          </p>
+        </div>
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+          {renderFields(fields.slice(0, 5))}
+        </div>
+      </section>
+      <section
+        aria-labelledby="professional-links-heading"
+        className="border-t border-base-300 pt-5"
+      >
+        <div className="mb-3">
+          <h4 className="text-sm font-semibold" id="professional-links-heading">
+            Professional links
+          </h4>
+          <p className="mt-0.5 text-xs text-base-content/60">
+            Add links that help employers learn more about your work.
+          </p>
+        </div>
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+          {renderFields(fields.slice(5))}
+        </div>
+      </section>
+    </div>
   )
 }
 function Summary({ text, setText }: any) {
@@ -904,83 +952,10 @@ function Preview(props: any) {
     ],
   )
   const Template = getResumeTemplate(props.templateId).renderer
-  const pagesRef = useRef<HTMLDivElement>(null)
-  const sourceTemplateRef = useRef<{
-    key: string
-    template: HTMLElement
-  } | null>(null)
-  const paginationKey = JSON.stringify(normalized)
-  useLayoutEffect(() => {
-    const pages = pagesRef.current
-    const firstPage = pages?.querySelector<HTMLElement>('.resume-page')
-    const firstTemplate =
-      firstPage?.querySelector<HTMLElement>('.resume-template')
-    if (!pages || !firstPage || !firstTemplate) return
-    pages
-      .querySelectorAll('.resume-page:not(:first-child)')
-      .forEach((page) => page.remove())
-    if (sourceTemplateRef.current?.key === paginationKey) {
-      firstTemplate.replaceChildren(
-        ...Array.from(sourceTemplateRef.current.template.childNodes).map(
-          (node) => node.cloneNode(true),
-        ),
-      )
-    } else {
-      sourceTemplateRef.current = {
-        key: paginationKey,
-        template: firstTemplate.cloneNode(true) as HTMLElement,
-      }
-    }
-
-    const createPage = () => {
-      const page = firstPage.cloneNode(false) as HTMLElement
-      const template = firstTemplate.cloneNode(false) as HTMLElement
-      page.append(template)
-      pages.append(page)
-      return { page, template }
-    }
-    const splitLastSection = (page: HTMLElement, template: HTMLElement) => {
-      const sections = Array.from(
-        template.querySelectorAll<HTMLElement>(':scope > .resume-section'),
-      )
-      const section = sections.at(-1)
-      if (!section) return false
-      const next = createPage()
-      if (sections.length > 1) {
-        next.template.prepend(section)
-        return true
-      }
-
-      const sectionItems = Array.from(section.children).slice(1)
-      const item = sectionItems.at(-1)
-      if (!item) return false
-      const continuation = section.cloneNode(false) as HTMLElement
-      const heading = section.querySelector('h2')
-      if (heading) continuation.append(heading.cloneNode(true))
-      continuation.append(item)
-      next.template.append(continuation)
-      return true
-    }
-
-    const pageList = [firstPage]
-    for (const page of pageList) {
-      const template = page.querySelector<HTMLElement>('.resume-template')
-      if (!template) continue
-      while (page.scrollHeight > page.clientHeight) {
-        const existingPages = pages.querySelectorAll('.resume-page').length
-        if (existingPages > 12 || !splitLastSection(page, template)) break
-        const nextPage = pages.lastElementChild as HTMLElement
-        pageList.push(nextPage)
-      }
-    }
-  }, [paginationKey])
   return (
     <div className="resume-preview-shell rounded-box border border-base-300 bg-base-300 p-3 sm:p-4">
-      <div className="resume-pages" ref={pagesRef}>
-        <article
-          className="resume-page mx-auto bg-white shadow-xl"
-          key={paginationKey}
-        >
+      <div className="resume-pages">
+        <article className="resume-page mx-auto bg-white shadow-xl">
           <Template resume={normalized} />
         </article>
       </div>

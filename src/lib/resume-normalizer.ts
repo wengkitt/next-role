@@ -18,6 +18,11 @@ export type NormalizedResume = {
 }
 
 const present = (value?: string) => value?.trim() || undefined
+const descriptionBullets = (value: string) =>
+  value
+    .split(/\n+|(?<=[.!?])\s+(?=[A-Z])/)
+    .map((item) => item.trim())
+    .filter(Boolean)
 const month = (value?: string) =>
   value
     ? new Date(`${value}-01T00:00:00`).toLocaleDateString(undefined, {
@@ -73,10 +78,7 @@ export function normalizeResume({
       .map((item) => ({
         ...item,
         dateRange: range(item.startDate, item.endDate, item.isCurrent),
-        bullets: item.description
-          .split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean),
+        bullets: descriptionBullets(item.description),
       })),
     education: [...education]
       .sort((a, b) => a.sortOrder - b.sortOrder)

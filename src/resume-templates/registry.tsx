@@ -20,15 +20,20 @@ const Section = ({
     {children}
   </section>
 )
+const descriptionBullets = (description: string) =>
+  description
+    .split(/\n+|(?<=[.!?])\s+(?=[A-Z])/)
+    .map((item) => item.trim())
+    .filter(Boolean)
 const Contact = ({ resume }: { resume: NormalizedResume }) => (
-  <p className="resume-contact">
-    {resume.contact.map((item, i) => (
+  <div className="resume-contact">
+    {resume.contact.map((item, index) => (
       <span key={item.label}>
-        {i > 0 && ' · '}
+        {index > 0 && ' · '}
         {item.href ? <a href={item.href}>{item.label}</a> : item.label}
       </span>
     ))}
-  </p>
+  </div>
 )
 const Content = ({ resume }: { resume: NormalizedResume }) => (
   <>
@@ -72,14 +77,26 @@ const Content = ({ resume }: { resume: NormalizedResume }) => (
               </span>
             </div>
             <time>{item.dateRange}</time>
-            {item.description && <p>{item.description}</p>}
+            {item.description && (
+              <ul>
+                {descriptionBullets(item.description).map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </ul>
+            )}
           </article>
         ))}
       </Section>
     )}
     {resume.skills.length > 0 && (
       <Section title="Skills">
-        <p>{resume.skills.join(' · ')}</p>
+        <div className="skills-block">
+          {resume.skills.map((skill) => (
+            <span className="skill-tag" key={skill}>
+              {skill}
+            </span>
+          ))}
+        </div>
       </Section>
     )}
     {resume.projects.length > 0 && (
@@ -96,14 +113,23 @@ const Content = ({ resume }: { resume: NormalizedResume }) => (
                 {item.technologyList.join(' · ')}
               </p>
             )}
-            {item.description && <p>{item.description}</p>}
-            {[item.projectUrl, item.repositoryUrl]
-              .filter(Boolean)
-              .map((url) => (
-                <a className="resume-link" href={url} key={url}>
-                  {url}
-                </a>
-              ))}
+            {item.description && (
+              <ul>
+                {descriptionBullets(item.description).map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </ul>
+            )}
+            {item.projectUrl && (
+              <a className="resume-link" href={item.projectUrl}>
+                Live site: {item.projectUrl}
+              </a>
+            )}
+            {item.repositoryUrl && (
+              <a className="resume-link" href={item.repositoryUrl}>
+                Repository: {item.repositoryUrl}
+              </a>
+            )}
           </article>
         ))}
       </Section>
