@@ -18,22 +18,22 @@ export function AppSidebar({ user }: AppSidebarProps) {
   })
 
   return (
-    <aside className="flex min-h-full w-72 flex-col border-r border-base-300 bg-base-100">
-      <div className="px-5 pt-6 pb-5">
+    <aside className="flex min-h-full w-56 flex-col border-r border-base-300 bg-base-100">
+      <div className="px-4 pt-4 pb-4">
         <Link
           to="/app/resumes"
-          className="inline-flex items-center gap-2 text-xl font-bold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+          className="inline-flex items-center gap-2 text-lg font-bold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
           aria-label="NextRole resumes"
         >
-          <span className="grid size-8 place-items-center rounded-box bg-primary text-sm font-black text-primary-content">
+          <span className="grid size-7 place-items-center rounded-box bg-primary text-sm font-black text-primary-content">
             N
           </span>
           NextRole
         </Link>
       </div>
 
-      <nav className="px-3" aria-label="Main navigation">
-        <ul className="menu menu-md w-full gap-1 p-0">
+      <nav className="px-2" aria-label="Main navigation">
+        <ul className="menu menu-sm w-full gap-0.5 p-0">
           {navigation.map(({ to, label, icon: Icon }) => {
             const isActive = pathname === to || pathname.startsWith(`${to}/`)
             return (
@@ -48,7 +48,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
         </ul>
       </nav>
 
-      <div className="mt-auto border-t border-base-300 p-3">
+      <div className="mt-auto border-t border-base-300 p-2">
         <UserMenu {...user} />
       </div>
     </aside>
