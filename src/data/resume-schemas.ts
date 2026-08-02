@@ -19,6 +19,23 @@ export const templateSchema = z.object({
   templateId: z.enum(['classic', 'modern', 'minimal']),
 })
 
+export const resumeSectionSchema = z.enum([
+  'summary',
+  'experience',
+  'skills',
+  'projects',
+  'education',
+  'certifications',
+  'languages',
+  'awards',
+  'volunteer',
+])
+export const sectionPreferencesSchema = z.object({
+  resumeId: resumeIdSchema,
+  order: z.array(resumeSectionSchema),
+  hidden: z.array(resumeSectionSchema),
+})
+
 const optionalText = z.string().trim().max(200).optional()
 const optionalUrl = z
   .string()
@@ -163,5 +180,67 @@ export type EducationValues = Omit<
 >
 export type ProjectValues = Omit<
   z.infer<typeof projectSchema>,
+  'resumeId' | 'id'
+>
+
+export const certificationSchema = z.object({
+  resumeId: resumeIdSchema,
+  id: z.string().min(1).optional(),
+  name: z.string().trim().min(1, 'Certification name is required.').max(200),
+  issuer: optionalEntryText,
+  date: optionalDate,
+  credentialUrl: optionalUrl,
+})
+
+export const languageSchema = z.object({
+  resumeId: resumeIdSchema,
+  id: z.string().min(1).optional(),
+  language: z.string().trim().min(1, 'Language is required.').max(100),
+  proficiency: optionalEntryText,
+})
+
+export const awardSchema = z.object({
+  resumeId: resumeIdSchema,
+  id: z.string().min(1).optional(),
+  title: z.string().trim().min(1, 'Award title is required.').max(200),
+  issuer: optionalEntryText,
+  date: optionalDate,
+  description: optionalLongText,
+})
+
+export const volunteerSchema = z
+  .object({
+    resumeId: resumeIdSchema,
+    id: z.string().min(1).optional(),
+    organization: z
+      .string()
+      .trim()
+      .min(1, 'Organization is required.')
+      .max(200),
+    role: optionalEntryText,
+    startDate: optionalDate,
+    endDate: optionalDate,
+    description: optionalLongText,
+  })
+  .superRefine((value, context) => {
+    if (value.startDate && value.endDate && value.endDate < value.startDate)
+      context.addIssue({
+        code: 'custom',
+        path: ['endDate'],
+        message: 'End date cannot be earlier than the start date.',
+      })
+  })
+
+export type CertificationValues = Omit<
+  z.infer<typeof certificationSchema>,
+  'resumeId' | 'id'
+>
+export type LanguageValues = Omit<
+  z.infer<typeof languageSchema>,
+  'resumeId' | 'id'
+>
+export type AwardValues = Omit<z.infer<typeof awardSchema>, 'resumeId' | 'id'>
+export type VolunteerValues = Omit<
+  z.infer<typeof volunteerSchema>,
   'resumeId' | 'id'
 >

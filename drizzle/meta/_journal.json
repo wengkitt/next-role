@@ -36,6 +36,20 @@
       "when": 1785551734329,
       "tag": "0004_woozy_tyger_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1785681657307,
+      "tag": "0005_thin_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1785682146948,
+      "tag": "0006_curious_black_bird",
+      "breakpoints": true
     }
   ]
 }

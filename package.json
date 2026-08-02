@@ -14,6 +14,7 @@
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
+    "test": "vitest run",
     "deploy": "pnpm run build && wrangler deploy",
     "cf-typegen": "wrangler types",
     "db:generate": "drizzle-kit generate",
@@ -24,6 +25,7 @@
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.6.25",
+    "@react-pdf/renderer": "^4.5.1",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-form": "^1.33.2",
@@ -33,10 +35,9 @@
     "better-auth": "^1.6.25",
     "daisyui": "^5.7.8",
     "drizzle-orm": "^0.45.2",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1",
     "lucide-react": "^1.28.0",
     "motion": "^12.43.0",
+    "pdf-lib": "^1.17.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwindcss": "^4.1.18",
@@ -58,6 +59,7 @@
     "oxlint": "^1.76.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.0",
+    "vitest": "^4.1.10",
     "wrangler": "^4.115.0"
   }
 }
