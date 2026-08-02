@@ -1,52 +1,51 @@
-import { ArrowRight } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
 import { SectionHeading } from './SectionHeading'
 import { ResumeDocument } from './ResumeDocument'
+import { resumeTemplates } from '#/resume-templates/registry'
 
 export function TemplatesSection() {
-  const templates = [
-    ['Classic', 'A trusted, structured layout for clear storytelling.'],
-    ['Modern', 'A confident layout with a fresh visual hierarchy.'],
-    ['Minimal', 'A focused, understated design that lets experience lead.'],
-  ]
   return (
     <section id="templates" className="bg-base-100 px-4 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <SectionHeading
           eyebrow="Resume templates"
-          title="Choose a layout that suits your story."
-          description="Start with a well-crafted foundation, then make it yours."
+          title="Choose a layout that helps your story come through."
+          description="Every template is built around the same searchable resume structure, so you can choose the presentation without losing the substance."
         />
         <div className="grid gap-6 md:grid-cols-3">
-          {templates.map(([name, description], index) => (
+          {resumeTemplates.map((template) => (
             <article
-              className="card card-border overflow-hidden bg-base-100"
-              key={name}
+              className="card card-border overflow-hidden bg-base-100 shadow-sm"
+              key={template.id}
             >
               <div
-                className={`bg-base-200 p-6 ${index === 1 ? 'bg-base-300' : ''}`}
+                className={`p-6 ${template.id === 'modern' ? 'bg-base-300' : 'bg-base-200'}`}
               >
-                <div
-                  className={
-                    index === 1
-                      ? 'mx-auto max-w-[11rem] border-l-4 border-primary shadow-md'
-                      : 'mx-auto max-w-[11rem] shadow-md'
-                  }
-                >
-                  <ResumeDocument compact />
+                <div className="mx-auto max-w-[12rem] shadow-md">
+                  <ResumeDocument compact templateId={template.id} />
                 </div>
               </div>
-              <div className="card-body">
-                <h3 className="card-title">{name}</h3>
-                <p className="leading-6 text-base-content/70">{description}</p>
-                <div className="card-actions mt-3">
-                  <a href="#get-started" className="btn btn-outline btn-sm">
-                    Use This Template{' '}
-                    <ArrowRight size={15} aria-hidden="true" />
-                  </a>
+              <div className="card-body gap-3">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="card-title">{template.displayName}</h3>
+                  <span className="badge badge-ghost badge-sm">
+                    {template.id}
+                  </span>
                 </div>
+                <p className="leading-6 text-base-content/70">
+                  {template.description}
+                </p>
+                <p className="text-sm leading-6 text-base-content/55">
+                  {template.guidance}
+                </p>
               </div>
             </article>
           ))}
+        </div>
+        <div className="mt-10 text-center">
+          <Link to="/sign-up" className="btn btn-primary">
+            Create your resume
+          </Link>
         </div>
       </div>
     </section>
