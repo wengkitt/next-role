@@ -1,16 +1,21 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
   createResumeSchema,
+  awardSchema,
+  certificationSchema,
   deleteEntrySchema,
   educationSchema,
+  languageSchema,
   profileSchema,
   projectSchema,
   reorderSchema,
   renameResumeSchema,
   resumeActionSchema,
+  sectionPreferencesSchema,
   skillSchema,
   summarySchema,
   templateSchema,
+  volunteerSchema,
   workExperienceSchema,
 } from './resume-schemas'
 
@@ -35,6 +40,20 @@ export type ResumeProfile = {
 }
 
 export type ResumeSummaryContent = { content: string }
+export type ResumeSectionId =
+  | 'summary'
+  | 'experience'
+  | 'skills'
+  | 'projects'
+  | 'education'
+  | 'certifications'
+  | 'languages'
+  | 'awards'
+  | 'volunteer'
+export type ResumeSectionPreferences = {
+  order: ResumeSectionId[]
+  hidden: ResumeSectionId[]
+}
 export type WorkExperience = {
   id: string
   jobTitle: string
@@ -68,6 +87,37 @@ export type ResumeProject = {
   repositoryUrl: string
   startDate: string
   endDate: string
+  sortOrder: number
+}
+export type ResumeCertification = {
+  id: string
+  name: string
+  issuer: string
+  date: string
+  credentialUrl: string
+  sortOrder: number
+}
+export type ResumeLanguage = {
+  id: string
+  language: string
+  proficiency: string
+  sortOrder: number
+}
+export type ResumeAward = {
+  id: string
+  title: string
+  issuer: string
+  date: string
+  description: string
+  sortOrder: number
+}
+export type ResumeVolunteer = {
+  id: string
+  organization: string
+  role: string
+  startDate: string
+  endDate: string
+  description: string
   sortOrder: number
 }
 
@@ -173,6 +223,33 @@ export const saveResumeTemplate = createServerFn({ method: 'POST' })
     return toSummary(result[0])
   })
 
+export const saveResumeSectionPreferences = createServerFn({ method: 'POST' })
+  .validator(sectionPreferencesSchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    const [{ and, eq }, { db }, { resumes }] = await Promise.all([
+      import('drizzle-orm'),
+      import('#/db'),
+      import('#/db/schema'),
+    ])
+    const now = new Date()
+    const result = await db
+      .update(resumes)
+      .set({
+        sectionOrder: JSON.stringify(data.order),
+        hiddenSections: JSON.stringify(data.hidden),
+        updatedAt: now,
+      })
+      .where(and(eq(resumes.id, data.resumeId), eq(resumes.userId, user.id)))
+      .returning({ id: resumes.id })
+    if (!result[0]) throw new Error('Resume not found')
+    return {
+      order: data.order,
+      hidden: data.hidden,
+      updatedAt: now.toISOString(),
+    }
+  })
+
 export const duplicateResume = createServerFn({ method: 'POST' })
   .validator(resumeActionSchema)
   .handler(async ({ data }) => {
@@ -227,10 +304,14 @@ export const getResumeEditorData = createServerFn({ method: 'GET' })
       { db },
       {
         educationEntries,
+        resumeAwards,
+        resumeCertifications,
+        resumeLanguages,
         resumeProfiles,
         resumeProjects,
         resumeSkills,
         resumeSummaries,
+        resumeVolunteer,
         resumes,
         workExperiences,
       },
@@ -250,7 +331,17 @@ export const getResumeEditorData = createServerFn({ method: 'GET' })
       .from(resumeProfiles)
       .where(eq(resumeProfiles.resumeId, resume.id))
       .get()
-    const [summary, work, education, skills, projects] = await Promise.all([
+    const [
+      summary,
+      work,
+      education,
+      skills,
+      projects,
+      certifications,
+      languages,
+      awards,
+      volunteer,
+    ] = await Promise.all([
       db
         .select()
         .from(resumeSummaries)
@@ -280,6 +371,30 @@ export const getResumeEditorData = createServerFn({ method: 'GET' })
         .where(eq(resumeProjects.resumeId, resume.id))
         .orderBy(asc(resumeProjects.sortOrder))
         .all(),
+      db
+        .select()
+        .from(resumeCertifications)
+        .where(eq(resumeCertifications.resumeId, resume.id))
+        .orderBy(asc(resumeCertifications.sortOrder))
+        .all(),
+      db
+        .select()
+        .from(resumeLanguages)
+        .where(eq(resumeLanguages.resumeId, resume.id))
+        .orderBy(asc(resumeLanguages.sortOrder))
+        .all(),
+      db
+        .select()
+        .from(resumeAwards)
+        .where(eq(resumeAwards.resumeId, resume.id))
+        .orderBy(asc(resumeAwards.sortOrder))
+        .all(),
+      db
+        .select()
+        .from(resumeVolunteer)
+        .where(eq(resumeVolunteer.resumeId, resume.id))
+        .orderBy(asc(resumeVolunteer.sortOrder))
+        .all(),
     ])
     return {
       resume: toSummary(resume),
@@ -300,8 +415,53 @@ export const getResumeEditorData = createServerFn({ method: 'GET' })
       educationEntries: education.map(educationResult),
       skills,
       projects: projects.map(projectResult),
+      certifications: certifications.map(certificationResult),
+      languages: languages.map(languageResult),
+      awards: awards.map(awardResult),
+      volunteer: volunteer.map(volunteerResult),
+      sectionPreferences: parseSectionPreferences(
+        resume.sectionOrder,
+        resume.hiddenSections,
+      ),
     }
   })
+
+const defaultSectionOrder: ResumeSectionId[] = [
+  'summary',
+  'experience',
+  'skills',
+  'projects',
+  'education',
+  'certifications',
+  'languages',
+  'awards',
+  'volunteer',
+]
+
+function parseSectionPreferences(
+  order: string,
+  hidden: string,
+): ResumeSectionPreferences {
+  const isSection = (value: unknown): value is ResumeSectionId =>
+    typeof value === 'string' &&
+    defaultSectionOrder.includes(value as ResumeSectionId)
+  const read = (value: string) => {
+    try {
+      const parsed: unknown = JSON.parse(value || '[]')
+      return Array.isArray(parsed) ? parsed.filter(isSection) : []
+    } catch {
+      return []
+    }
+  }
+  const configured = read(order)
+  return {
+    order: [
+      ...configured,
+      ...defaultSectionOrder.filter((item) => !configured.includes(item)),
+    ],
+    hidden: read(hidden),
+  }
+}
 
 export const saveResumeProfile = createServerFn({ method: 'POST' })
   .validator(profileSchema)
@@ -458,18 +618,45 @@ function projectResult(row: any): ResumeProject {
     endDate: row.endDate ?? '',
   }
 }
+function certificationResult(row: any): ResumeCertification {
+  return {
+    ...row,
+    issuer: row.issuer ?? '',
+    date: row.date ?? '',
+    credentialUrl: row.credentialUrl ?? '',
+  }
+}
+function languageResult(row: any): ResumeLanguage {
+  return { ...row, proficiency: row.proficiency ?? '' }
+}
+function awardResult(row: any): ResumeAward {
+  return {
+    ...row,
+    issuer: row.issuer ?? '',
+    date: row.date ?? '',
+    description: row.description ?? '',
+  }
+}
+function volunteerResult(row: any): ResumeVolunteer {
+  return {
+    ...row,
+    role: row.role ?? '',
+    startDate: row.startDate ?? '',
+    endDate: row.endDate ?? '',
+    description: row.description ?? '',
+  }
+}
 
 export const saveWorkExperience = createServerFn({ method: 'POST' })
   .validator(workExperienceSchema)
   .handler(async ({ data }) => {
     const user = await requireUser()
     await requireOwnedResume(data.resumeId, user.id)
-    const [{ and, asc, eq, sql }, { db }, { workExperiences }] =
-      await Promise.all([
-        import('drizzle-orm'),
-        import('#/db'),
-        import('#/db/schema'),
-      ])
+    const [{ and, asc, eq }, { db }, { workExperiences }] = await Promise.all([
+      import('drizzle-orm'),
+      import('#/db'),
+      import('#/db/schema'),
+    ])
     const now = new Date()
     const values = {
       jobTitle: data.jobTitle,
@@ -653,7 +840,7 @@ export const createResumeSkill = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const user = await requireUser()
     await requireOwnedResume(data.resumeId, user.id)
-    const [{ asc, eq, sql }, { db }, { resumeSkills }] = await Promise.all([
+    const [{ asc, eq }, { db }, { resumeSkills }] = await Promise.all([
       import('drizzle-orm'),
       import('#/db'),
       import('#/db/schema'),
@@ -694,7 +881,11 @@ function deleteSectionEntry(
     | 'workExperiences'
     | 'educationEntries'
     | 'resumeProjects'
-    | 'resumeSkills',
+    | 'resumeSkills'
+    | 'resumeCertifications'
+    | 'resumeLanguages'
+    | 'resumeAwards'
+    | 'resumeVolunteer',
 ) {
   return createServerFn({ method: 'POST' })
     .validator(deleteEntrySchema)
@@ -729,13 +920,31 @@ export const deleteResumeProject = createServerFn({ method: 'POST' })
 export const deleteResumeSkill = createServerFn({ method: 'POST' })
   .validator(deleteEntrySchema)
   .handler(({ data }) => deleteSectionEntry('resumeSkills')({ data } as any))
+export const deleteResumeCertification = createServerFn({ method: 'POST' })
+  .validator(deleteEntrySchema)
+  .handler(({ data }) =>
+    deleteSectionEntry('resumeCertifications')({ data } as any),
+  )
+export const deleteResumeLanguage = createServerFn({ method: 'POST' })
+  .validator(deleteEntrySchema)
+  .handler(({ data }) => deleteSectionEntry('resumeLanguages')({ data } as any))
+export const deleteResumeAward = createServerFn({ method: 'POST' })
+  .validator(deleteEntrySchema)
+  .handler(({ data }) => deleteSectionEntry('resumeAwards')({ data } as any))
+export const deleteResumeVolunteer = createServerFn({ method: 'POST' })
+  .validator(deleteEntrySchema)
+  .handler(({ data }) => deleteSectionEntry('resumeVolunteer')({ data } as any))
 
 function reorderSection(
   key:
     | 'workExperiences'
     | 'educationEntries'
     | 'resumeProjects'
-    | 'resumeSkills',
+    | 'resumeSkills'
+    | 'resumeCertifications'
+    | 'resumeLanguages'
+    | 'resumeAwards'
+    | 'resumeVolunteer',
 ) {
   return createServerFn({ method: 'POST' })
     .validator(reorderSchema)
@@ -760,7 +969,7 @@ function reorderSection(
       )
         throw new Error('Unable to reorder entries.')
       const now = new Date()
-      await db.batch(
+      await Promise.all(
         data.ids.map((id, sortOrder) =>
           db
             .update(table)
@@ -783,3 +992,245 @@ export const reorderResumeProjects = createServerFn({ method: 'POST' })
 export const reorderResumeSkills = createServerFn({ method: 'POST' })
   .validator(reorderSchema)
   .handler(({ data }) => reorderSection('resumeSkills')({ data } as any))
+export const reorderResumeCertifications = createServerFn({ method: 'POST' })
+  .validator(reorderSchema)
+  .handler(({ data }) =>
+    reorderSection('resumeCertifications')({ data } as any),
+  )
+export const reorderResumeLanguages = createServerFn({ method: 'POST' })
+  .validator(reorderSchema)
+  .handler(({ data }) => reorderSection('resumeLanguages')({ data } as any))
+export const reorderResumeAwards = createServerFn({ method: 'POST' })
+  .validator(reorderSchema)
+  .handler(({ data }) => reorderSection('resumeAwards')({ data } as any))
+export const reorderResumeVolunteer = createServerFn({ method: 'POST' })
+  .validator(reorderSchema)
+  .handler(({ data }) => reorderSection('resumeVolunteer')({ data } as any))
+
+export const saveResumeCertification = createServerFn({ method: 'POST' })
+  .validator(certificationSchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    await requireOwnedResume(data.resumeId, user.id)
+    const [{ and, asc, eq }, { db }, { resumeCertifications }] =
+      await Promise.all([
+        import('drizzle-orm'),
+        import('#/db'),
+        import('#/db/schema'),
+      ])
+    const now = new Date()
+    const values = {
+      name: data.name,
+      issuer: nullable(data.issuer),
+      date: nullable(data.date),
+      credentialUrl: nullable(data.credentialUrl),
+      updatedAt: now,
+    }
+    let row
+    if (data.id) {
+      row = (
+        await db
+          .update(resumeCertifications)
+          .set(values)
+          .where(
+            and(
+              eq(resumeCertifications.id, data.id),
+              eq(resumeCertifications.resumeId, data.resumeId),
+            ),
+          )
+          .returning()
+      )[0]
+      if (!row) throw new Error('Certification not found')
+    } else {
+      const existing = await db
+        .select({ id: resumeCertifications.id })
+        .from(resumeCertifications)
+        .where(eq(resumeCertifications.resumeId, data.resumeId))
+        .orderBy(asc(resumeCertifications.sortOrder))
+        .all()
+      row = (
+        await db
+          .insert(resumeCertifications)
+          .values({
+            id: crypto.randomUUID(),
+            resumeId: data.resumeId,
+            ...values,
+            sortOrder: existing.length,
+            createdAt: now,
+          })
+          .returning()
+      )[0]
+    }
+    await touchResume(data.resumeId, user.id, now)
+    return certificationResult(row)
+  })
+
+export const saveResumeLanguage = createServerFn({ method: 'POST' })
+  .validator(languageSchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    await requireOwnedResume(data.resumeId, user.id)
+    const [{ and, asc, eq }, { db }, { resumeLanguages }] = await Promise.all([
+      import('drizzle-orm'),
+      import('#/db'),
+      import('#/db/schema'),
+    ])
+    const now = new Date()
+    const values = {
+      language: data.language,
+      proficiency: nullable(data.proficiency),
+      updatedAt: now,
+    }
+    let row
+    if (data.id) {
+      row = (
+        await db
+          .update(resumeLanguages)
+          .set(values)
+          .where(
+            and(
+              eq(resumeLanguages.id, data.id),
+              eq(resumeLanguages.resumeId, data.resumeId),
+            ),
+          )
+          .returning()
+      )[0]
+      if (!row) throw new Error('Language not found')
+    } else {
+      const existing = await db
+        .select({ id: resumeLanguages.id })
+        .from(resumeLanguages)
+        .where(eq(resumeLanguages.resumeId, data.resumeId))
+        .orderBy(asc(resumeLanguages.sortOrder))
+        .all()
+      row = (
+        await db
+          .insert(resumeLanguages)
+          .values({
+            id: crypto.randomUUID(),
+            resumeId: data.resumeId,
+            ...values,
+            sortOrder: existing.length,
+            createdAt: now,
+          })
+          .returning()
+      )[0]
+    }
+    await touchResume(data.resumeId, user.id, now)
+    return languageResult(row)
+  })
+
+export const saveResumeAward = createServerFn({ method: 'POST' })
+  .validator(awardSchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    await requireOwnedResume(data.resumeId, user.id)
+    const [{ and, asc, eq }, { db }, { resumeAwards }] = await Promise.all([
+      import('drizzle-orm'),
+      import('#/db'),
+      import('#/db/schema'),
+    ])
+    const now = new Date()
+    const values = {
+      title: data.title,
+      issuer: nullable(data.issuer),
+      date: nullable(data.date),
+      description: nullable(data.description),
+      updatedAt: now,
+    }
+    let row
+    if (data.id) {
+      row = (
+        await db
+          .update(resumeAwards)
+          .set(values)
+          .where(
+            and(
+              eq(resumeAwards.id, data.id),
+              eq(resumeAwards.resumeId, data.resumeId),
+            ),
+          )
+          .returning()
+      )[0]
+      if (!row) throw new Error('Award not found')
+    } else {
+      const existing = await db
+        .select({ id: resumeAwards.id })
+        .from(resumeAwards)
+        .where(eq(resumeAwards.resumeId, data.resumeId))
+        .orderBy(asc(resumeAwards.sortOrder))
+        .all()
+      row = (
+        await db
+          .insert(resumeAwards)
+          .values({
+            id: crypto.randomUUID(),
+            resumeId: data.resumeId,
+            ...values,
+            sortOrder: existing.length,
+            createdAt: now,
+          })
+          .returning()
+      )[0]
+    }
+    await touchResume(data.resumeId, user.id, now)
+    return awardResult(row)
+  })
+
+export const saveResumeVolunteer = createServerFn({ method: 'POST' })
+  .validator(volunteerSchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    await requireOwnedResume(data.resumeId, user.id)
+    const [{ and, asc, eq }, { db }, { resumeVolunteer }] = await Promise.all([
+      import('drizzle-orm'),
+      import('#/db'),
+      import('#/db/schema'),
+    ])
+    const now = new Date()
+    const values = {
+      organization: data.organization,
+      role: nullable(data.role),
+      startDate: nullable(data.startDate),
+      endDate: nullable(data.endDate),
+      description: nullable(data.description),
+      updatedAt: now,
+    }
+    let row
+    if (data.id) {
+      row = (
+        await db
+          .update(resumeVolunteer)
+          .set(values)
+          .where(
+            and(
+              eq(resumeVolunteer.id, data.id),
+              eq(resumeVolunteer.resumeId, data.resumeId),
+            ),
+          )
+          .returning()
+      )[0]
+      if (!row) throw new Error('Volunteer entry not found')
+    } else {
+      const existing = await db
+        .select({ id: resumeVolunteer.id })
+        .from(resumeVolunteer)
+        .where(eq(resumeVolunteer.resumeId, data.resumeId))
+        .orderBy(asc(resumeVolunteer.sortOrder))
+        .all()
+      row = (
+        await db
+          .insert(resumeVolunteer)
+          .values({
+            id: crypto.randomUUID(),
+            resumeId: data.resumeId,
+            ...values,
+            sortOrder: existing.length,
+            createdAt: now,
+          })
+          .returning()
+      )[0]
+    }
+    await touchResume(data.resumeId, user.id, now)
+    return volunteerResult(row)
+  })

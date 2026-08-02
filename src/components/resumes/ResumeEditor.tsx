@@ -1,80 +1,68 @@
 import { saveLandingToast } from '#/components/LandingToast'
-import { normalizeResume } from '#/lib/resume-normalizer'
-import { getResumeTemplate, resumeTemplates } from '#/resume-templates/registry'
 import { ResumeDialog } from '#/components/resumes/ResumeDialogs'
+import {
+  Entries,
+  Profile,
+  Settings,
+  Skills,
+  Summary,
+} from '#/components/resumes/ResumeEditorSections'
+import { ResumePdfPreview } from '#/components/resumes/ResumePdfPreview'
+import { ResumeQualityPanel } from '#/components/resumes/ResumeQualityPanel'
+import { useResumeEditorState } from '#/components/resumes/useResumeEditorState'
+import type { EditorSection } from '#/components/resumes/useResumeEditorState'
 import { profileSchema, summarySchema } from '#/data/resume-schemas'
 import {
-  createResumeSkill,
-  deleteEducationEntry,
-  deleteResumeProject,
-  deleteResumeSkill,
-  deleteWorkExperience,
-  reorderEducationEntries,
-  reorderResumeProjects,
-  reorderResumeSkills,
-  reorderWorkExperiences,
-  saveEducationEntry,
   saveProfessionalSummary,
   saveResumeProfile,
+  saveResumeSectionPreferences,
   saveResumeTemplate,
-  saveResumeProject,
-  saveWorkExperience,
 } from '#/data/resumes'
 import type {
   EducationEntry,
+  ResumeAward,
+  ResumeCertification,
+  ResumeLanguage,
+  ResumeProfile,
   ResumeProject,
+  ResumeSectionPreferences,
   ResumeSkill,
   ResumeSummary,
+  ResumeVolunteer,
   WorkExperience,
 } from '#/data/resumes'
 import type { ProfileValues } from '#/data/resume-schemas'
+import { normalizeResumeDocument } from '#/lib/resume-document'
+import type {
+  ResumeDocumentData,
+  ResumeDocumentSection,
+} from '#/lib/resume-document'
+import { getResumeQualityReport } from '#/lib/resume-quality'
+import type { ResumeQualitySection } from '#/lib/resume-quality'
+import { userFacingError } from '#/lib/user-facing-error'
+import type { TemplateId } from '#/resume-templates/registry'
 import { Link, useRouter } from '@tanstack/react-router'
 import {
-  ArrowDown,
   ArrowLeft,
-  ArrowUp,
+  Award,
   BriefcaseBusiness,
+  Check,
   Eye,
+  FileBadge,
   FileText,
   FolderKanban,
   GraduationCap,
+  Languages,
   Pencil,
-  Plus,
   Save,
-  SlidersHorizontal,
+  Settings2,
   Sparkles,
-  Trash2,
   UserRound,
+  UsersRound,
 } from 'lucide-react'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 
-const fields: { key: keyof ProfileValues; label: string; type?: string }[] = [
-  { key: 'fullName', label: 'Full name' },
-  { key: 'professionalTitle', label: 'Professional title' },
-  { key: 'email', label: 'Email', type: 'email' },
-  { key: 'phone', label: 'Phone' },
-  { key: 'location', label: 'Location' },
-  { key: 'website', label: 'Website', type: 'url' },
-  { key: 'linkedinUrl', label: 'LinkedIn', type: 'url' },
-  { key: 'githubUrl', label: 'GitHub', type: 'url' },
-]
-type Section =
-  | 'profile'
-  | 'summary'
-  | 'work'
-  | 'education'
-  | 'skills'
-  | 'projects'
-  | 'settings'
-export function ResumeEditor({
-  resume,
-  profile,
-  summary,
-  workExperiences,
-  educationEntries,
-  skills,
-  projects,
-}: {
+type ResumeEditorProps = {
   resume: ResumeSummary
   profile: ProfileValues
   summary: { content: string }
@@ -82,233 +70,378 @@ export function ResumeEditor({
   educationEntries: EducationEntry[]
   skills: ResumeSkill[]
   projects: ResumeProject[]
-}) {
+  certifications?: ResumeCertification[]
+  languages?: ResumeLanguage[]
+  awards?: ResumeAward[]
+  volunteer?: ResumeVolunteer[]
+  sectionPreferences?: ResumeSectionPreferences
+}
+
+const defaultSectionOrder: ResumeDocumentSection[] = [
+  'summary',
+  'experience',
+  'skills',
+  'projects',
+  'education',
+  'certifications',
+  'languages',
+  'awards',
+  'volunteer',
+]
+
+const defaultPreferences: ResumeSectionPreferences = {
+  order: defaultSectionOrder,
+  hidden: [],
+}
+
+const labels: Record<EditorSection, string> = {
+  profile: 'Personal information',
+  summary: 'Professional summary',
+  work: 'Work experience',
+  education: 'Education',
+  skills: 'Skills',
+  projects: 'Projects',
+  certifications: 'Certifications',
+  languages: 'Languages',
+  awards: 'Awards',
+  volunteer: 'Volunteer work',
+  settings: 'Document settings',
+}
+
+export function ResumeEditor(props: ResumeEditorProps) {
   const router = useRouter()
-  const [section, setSection] = useState<Section>('profile')
-  const [values, setValues] = useState(profile)
-  const [summaryText, setSummaryText] = useState(summary.content)
-  const [work, setWork] = useState(workExperiences)
-  const [education, setEducation] = useState(educationEntries)
-  const [skillList, setSkillList] = useState(skills)
-  const [projectList, setProjectList] = useState(projects)
+  const state = useResumeEditorState({
+    profile: props.profile,
+    summary: props.summary,
+    work: props.workExperiences,
+    education: props.educationEntries,
+    skills: props.skills,
+    projects: props.projects,
+    certifications: props.certifications ?? [],
+    languages: props.languages ?? [],
+    awards: props.awards ?? [],
+    volunteer: props.volunteer ?? [],
+    sectionPreferences: props.sectionPreferences ?? defaultPreferences,
+  })
   const [showPreview, setShowPreview] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [renameOpen, setRenameOpen] = useState(false)
-  const [templateId, setTemplateId] = useState(resume.templateId)
-  const [isExporting, setIsExporting] = useState(false)
-  const message = (text: string) =>
-    saveLandingToast({ message: text, type: 'success' })
-  async function profileSave() {
-    const parsed = profileSchema.safeParse({ resumeId: resume.id, ...values })
-    if (!parsed.success)
-      return setError(parsed.error.issues[0]?.message ?? 'Check your details.')
-    setSaving(true)
+  const [templateId, setTemplateId] = useState<TemplateId>(
+    props.resume.templateId,
+  )
+  const [pageCount, setPageCount] = useState<number | undefined>()
+
+  const documentData = useMemo<ResumeDocumentData>(
+    () =>
+      normalizeResumeDocument({
+        resume: { title: props.resume.title },
+        profile: state.profile as ResumeProfile,
+        summary: state.summaryText,
+        work: state.work,
+        education: state.education,
+        skills: state.skills,
+        projects: state.projects,
+        certifications: state.certifications,
+        languages: state.languages,
+        awards: state.awards,
+        volunteer: state.volunteer,
+        sectionPreferences: state.sectionPreferences,
+      }),
+    [
+      props.resume.title,
+      state.profile,
+      state.summaryText,
+      state.work,
+      state.education,
+      state.skills,
+      state.projects,
+      state.certifications,
+      state.languages,
+      state.awards,
+      state.volunteer,
+      state.sectionPreferences,
+    ],
+  )
+  const qualityReport = useMemo(
+    () => getResumeQualityReport(documentData, pageCount),
+    [documentData, pageCount],
+  )
+  const hasUnsavedChanges = Object.values(state.dirtySections).some(Boolean)
+
+  function showError(message: string) {
+    setError(message)
+  }
+  function success(message: string) {
     setError('')
+    saveLandingToast({ message, type: 'success' })
+  }
+
+  async function profileSave() {
+    const parsed = profileSchema.safeParse({
+      resumeId: props.resume.id,
+      ...state.profile,
+    })
+    if (!parsed.success) {
+      showError(parsed.error.issues[0]?.message ?? 'Check your details.')
+      return
+    }
+    state.setSavingSection('profile')
     try {
-      const saved = await saveResumeProfile({ data: parsed.data })
-      const { updatedAt: _, ...next } = saved
-      setValues(next)
-      message('Personal information saved.')
-      await router.invalidate()
-    } catch {
-      setError('Unable to save changes.')
+      await saveResumeProfile({ data: parsed.data })
+      state.markSaved('profile')
+      success('Personal information saved.')
+    } catch (saveError) {
+      showError(userFacingError(saveError, 'Unable to save changes.'))
     } finally {
-      setSaving(false)
+      state.setSavingSection(null)
     }
   }
+
   async function summarySave() {
     const parsed = summarySchema.safeParse({
-      resumeId: resume.id,
-      content: summaryText,
+      resumeId: props.resume.id,
+      content: state.summaryText,
     })
-    if (!parsed.success)
-      return setError(parsed.error.issues[0]?.message ?? 'Check your summary.')
-    setSaving(true)
+    if (!parsed.success) {
+      showError(parsed.error.issues[0]?.message ?? 'Check your summary.')
+      return
+    }
+    state.setSavingSection('summary')
     try {
       await saveProfessionalSummary({ data: parsed.data })
-      message('Summary saved.')
-      await router.invalidate()
-    } catch {
-      setError('Unable to save summary.')
+      state.markSaved('summary')
+      success('Summary saved.')
+    } catch (saveError) {
+      showError(userFacingError(saveError, 'Unable to save summary.'))
     } finally {
-      setSaving(false)
+      state.setSavingSection(null)
     }
   }
-  async function chooseTemplate(nextTemplateId: typeof templateId) {
+
+  async function chooseTemplate(nextTemplateId: TemplateId) {
     if (nextTemplateId === templateId) return
     const previous = templateId
     setTemplateId(nextTemplateId)
     try {
       await saveResumeTemplate({
-        data: { resumeId: resume.id, templateId: nextTemplateId },
+        data: { resumeId: props.resume.id, templateId: nextTemplateId },
       })
-      message('Template selected.')
-      await router.invalidate()
-    } catch {
+      state.markSaved('settings')
+      success('Template selected.')
+    } catch (saveError) {
       setTemplateId(previous)
-      setError('Unable to save template selection.')
+      showError(userFacingError(saveError, 'Unable to save the template.'))
     }
   }
-  async function exportPdf() {
-    if (isExporting) return
-    const sourcePages = Array.from(
-      document.querySelectorAll<HTMLElement>('.resume-pages .resume-page'),
-    )
-    if (!sourcePages.length) {
-      saveLandingToast({
-        message: 'Unable to prepare the resume for export.',
-        type: 'error',
-      })
-      return
-    }
-    setIsExporting(true)
-    const source = values.fullName || resume.title
-    const filename = `${source
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')}-resume.pdf`
+
+  async function savePreferences() {
+    state.setSavingSection('settings')
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ])
-      const pdf = new jsPDF({
-        format: 'a4',
-        orientation: 'portrait',
-        unit: 'mm',
+      await saveResumeSectionPreferences({
+        data: {
+          resumeId: props.resume.id,
+          order: state.sectionPreferences.order,
+          hidden: state.sectionPreferences.hidden,
+        },
       })
-      for (const [index, sourcePage] of sourcePages.entries()) {
-        const canvas = await html2canvas(sourcePage, {
-          backgroundColor: '#ffffff',
-          onclone: (clonedDocument) => {
-            for (const element of [
-              clonedDocument.documentElement,
-              clonedDocument.body,
-            ]) {
-              element.style.setProperty(
-                'background-color',
-                '#ffffff',
-                'important',
-              )
-              element.style.setProperty('color', '#111111', 'important')
-            }
-          },
-          scale: 2,
-          useCORS: true,
-        })
-        if (index) pdf.addPage()
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297)
-      }
-      pdf.save(filename)
-      saveLandingToast({
-        message: 'Your PDF download has started.',
-        type: 'success',
-      })
-    } catch {
-      saveLandingToast({
-        message: 'Unable to create the PDF. Please try again.',
-        type: 'error',
-      })
+      state.markSaved('settings')
+      success('Document settings saved.')
+    } catch (saveError) {
+      showError(userFacingError(saveError, 'Unable to save document settings.'))
     } finally {
-      setIsExporting(false)
+      state.setSavingSection(null)
     }
   }
-  const content =
-    section === 'profile' ? (
-      <Profile values={values} setValues={setValues} />
-    ) : section === 'summary' ? (
-      <Summary text={summaryText} setText={setSummaryText} />
-    ) : section === 'settings' ? (
-      <TemplateSelector active={templateId} onSelect={chooseTemplate} />
-    ) : section === 'skills' ? (
-      <Skills
-        resumeId={resume.id}
-        items={skillList}
-        setItems={setSkillList}
-        fail={setError}
-      />
-    ) : (
-      <Entries
-        key={section}
-        kind={section}
-        resumeId={resume.id}
-        items={
-          section === 'work'
-            ? work
-            : section === 'education'
-              ? education
-              : projectList
-        }
-        setItems={
-          section === 'work'
-            ? setWork
-            : section === 'education'
-              ? setEducation
-              : setProjectList
-        }
-        fail={setError}
-      />
-    )
+
+  function contentForSection() {
+    switch (state.section) {
+      case 'profile':
+        return (
+          <Profile values={state.profile} setValues={state.updateProfile} />
+        )
+      case 'summary':
+        return (
+          <Summary text={state.summaryText} setText={state.updateSummary} />
+        )
+      case 'skills':
+        return (
+          <Skills
+            resumeId={props.resume.id}
+            items={state.skills}
+            setItems={state.setSkills}
+            onSaved={() => state.markSaved('skills')}
+            fail={showError}
+          />
+        )
+      case 'work':
+      case 'education':
+      case 'projects':
+        return (
+          <Entries
+            kind={state.section}
+            resumeId={props.resume.id}
+            items={
+              state.section === 'work'
+                ? state.work
+                : state.section === 'education'
+                  ? state.education
+                  : state.projects
+            }
+            setItems={
+              state.section === 'work'
+                ? state.setWork
+                : state.section === 'education'
+                  ? state.setEducation
+                  : state.setProjects
+            }
+            onSaved={() => state.markSaved(state.section)}
+            fail={showError}
+          />
+        )
+      case 'certifications':
+      case 'languages':
+      case 'awards':
+      case 'volunteer': {
+        const optionalSection = state.section as
+          | 'certifications'
+          | 'languages'
+          | 'awards'
+          | 'volunteer'
+        const optionalState = {
+          certifications: {
+            items: state.certifications,
+            setItems: state.setCertifications,
+          },
+          languages: { items: state.languages, setItems: state.setLanguages },
+          awards: { items: state.awards, setItems: state.setAwards },
+          volunteer: { items: state.volunteer, setItems: state.setVolunteer },
+        }[optionalSection]
+        return (
+          <Entries
+            kind={optionalSection}
+            resumeId={props.resume.id}
+            items={optionalState.items}
+            setItems={optionalState.setItems}
+            onSaved={() => state.markSaved(optionalSection)}
+            fail={showError}
+          />
+        )
+      }
+      case 'settings':
+        return (
+          <Settings
+            activeTemplate={templateId}
+            onTemplateSelect={(next) => void chooseTemplate(next)}
+            preferences={state.sectionPreferences}
+            setPreferences={state.setSectionPreferences}
+          />
+        )
+    }
+  }
+
+  const needsSave =
+    state.section === 'profile' ||
+    state.section === 'summary' ||
+    state.section === 'settings'
+  const saveLabel =
+    state.section === 'profile'
+      ? 'Save personal information'
+      : state.section === 'summary'
+        ? 'Save summary'
+        : 'Save document settings'
+
   return (
-    <main className="resume-editor-main min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 xl:h-[calc(100vh-4rem)] xl:overflow-hidden">
-      <div className="mx-auto max-w-[1600px]">
+    <main className="resume-editor-main min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-[1700px]">
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-base-300 pb-5">
           <div>
             <Link to="/app/resumes" className="btn btn-ghost btn-sm -ml-3">
               <ArrowLeft size={16} />
               Back to resumes
             </Link>
-            <h2 className="mt-3 text-2xl font-bold">{resume.title}</h2>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <h2 className="text-2xl font-bold">{props.resume.title}</h2>
+              <span
+                className={`badge ${hasUnsavedChanges ? 'badge-warning' : 'badge-success'} badge-soft gap-1`}
+              >
+                {hasUnsavedChanges ? (
+                  'Unsaved changes'
+                ) : (
+                  <>
+                    <Check size={13} /> All changes saved
+                  </>
+                )}
+              </span>
+            </div>
+            {state.lastSavedAt && !hasUnsavedChanges && (
+              <p className="mt-1 text-xs text-base-content/55">
+                Saved just now
+              </p>
+            )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button className="btn btn-sm" onClick={() => setRenameOpen(true)}>
               <Pencil size={15} />
               Rename
             </button>
             <button
               className="btn btn-sm lg:hidden"
-              onClick={() => setShowPreview(!showPreview)}
+              onClick={() => setShowPreview((visible) => !visible)}
             >
               <Eye size={15} />
-              {showPreview ? 'Edit' : 'Preview'}
-            </button>
-            <button
-              className="btn btn-sm"
-              aria-label="Export resume as PDF"
-              onClick={exportPdf}
-              disabled={isExporting}
-            >
-              {isExporting && (
-                <span className="loading loading-spinner loading-sm" />
-              )}
-              {isExporting ? 'Preparing PDF...' : 'Export PDF'}
+              {showPreview ? 'Edit' : 'Preview & export'}
             </button>
           </div>
         </header>
-        <div className="grid items-start gap-5 xl:grid-cols-[200px_minmax(0,.9fr)_minmax(400px,1.25fr)]">
-          <Navigation
-            current={section}
-            setCurrent={(nextSection: Section) => {
-              setSection(nextSection)
-              setError('')
-            }}
-            complete={{
-              profile: !!values.fullName,
-              summary: !!summaryText,
-              work: !!work.length,
-              education: !!education.length,
-              skills: !!skillList.length,
-              projects: !!projectList.length,
-              settings: false,
-            }}
-          />
+        <div className="grid items-start gap-5 xl:grid-cols-[220px_minmax(0,.9fr)_minmax(440px,1.2fr)]">
+          <aside className="grid gap-3">
+            <Navigation
+              current={state.section}
+              setCurrent={(nextSection) => {
+                state.setSection(nextSection)
+                setError('')
+              }}
+              complete={completionForState(state)}
+              dirty={state.dirtySections}
+            />
+            <ResumeQualityPanel
+              report={qualityReport}
+              onFix={(target: ResumeQualitySection) => {
+                if (target === 'settings') state.setSection('settings')
+                else if (target === 'profile') state.setSection('profile')
+                else if (target === 'summary') state.setSection('summary')
+                else if (target === 'work') state.setSection('work')
+                else if (target === 'education') state.setSection('education')
+                else if (target === 'skills') state.setSection('skills')
+                else if (target === 'projects') state.setSection('projects')
+                else state.setSection(target)
+                setShowPreview(false)
+              }}
+            />
+          </aside>
           <section
             className={`card border border-base-300 bg-base-100 ${showPreview ? 'hidden lg:block' : ''}`}
           >
             <div className="card-body p-5 sm:p-6">
-              <h3 className="card-title text-xl">{labels[section]}</h3>
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="card-title text-xl">
+                    {labels[state.section]}
+                  </h3>
+                  <p className="mt-1 text-xs text-base-content/55">
+                    {state.dirtySections[state.section]
+                      ? 'This section has unsaved changes.'
+                      : 'You can move freely between sections.'}
+                  </p>
+                </div>
+                {state.section !== 'settings' &&
+                  state.section !== 'profile' &&
+                  state.section !== 'summary' && (
+                    <span className="badge badge-ghost badge-sm">
+                      Saved per change
+                    </span>
+                  )}
+              </div>
               {error && (
                 <div
                   role="alert"
@@ -317,27 +450,25 @@ export function ResumeEditor({
                   {error}
                 </div>
               )}
-              {content}
-              {(section === 'profile' || section === 'summary') && (
-                <div className="card-actions justify-end">
+              {contentForSection()}
+              {needsSave && (
+                <div className="card-actions mt-5 justify-end border-t border-base-300 pt-4">
                   <button
                     className="btn btn-primary"
-                    disabled={saving}
+                    disabled={state.savingSection !== null}
                     onClick={() =>
-                      void (section === 'profile'
+                      void (state.section === 'profile'
                         ? profileSave()
-                        : summarySave())
+                        : state.section === 'summary'
+                          ? summarySave()
+                          : savePreferences())
                     }
                   >
-                    {saving && (
+                    {state.savingSection && (
                       <span className="loading loading-spinner loading-sm" />
                     )}
                     <Save size={16} />
-                    {saving
-                      ? 'Saving...'
-                      : section === 'summary'
-                        ? 'Save summary'
-                        : 'Save changes'}
+                    {state.savingSection ? 'Saving...' : saveLabel}
                   </button>
                 </div>
               )}
@@ -350,20 +481,16 @@ export function ResumeEditor({
               <div>
                 <h3 className="text-sm font-semibold">Live preview</h3>
                 <p className="text-xs text-base-content/60">
-                  Updates as you edit
+                  A4 · selectable text · automatic page wrapping
                 </p>
               </div>
-              <span className="badge badge-ghost badge-sm">A4</span>
+              <span className="badge badge-ghost badge-sm">{templateId}</span>
             </div>
-            <Preview
-              resume={{ title: resume.title }}
-              profile={values}
-              summary={summaryText}
-              work={work}
-              education={education}
-              skills={skillList}
-              projects={projectList}
+            <ResumePdfPreview
+              data={documentData}
               templateId={templateId}
+              title={props.resume.title}
+              onPageCountChange={setPageCount}
             />
           </section>
         </div>
@@ -371,7 +498,7 @@ export function ResumeEditor({
       {renameOpen && (
         <ResumeDialog
           mode="rename"
-          resume={resume}
+          resume={props.resume}
           onClose={() => setRenameOpen(false)}
           onSuccess={() => {
             setRenameOpen(false)
@@ -382,49 +509,75 @@ export function ResumeEditor({
     </main>
   )
 }
-const labels: Record<Section, string> = {
-  profile: 'Personal Information',
-  summary: 'Professional Summary',
-  work: 'Work Experience',
-  education: 'Education',
-  skills: 'Skills',
-  projects: 'Projects',
-  settings: 'Resume Settings',
+
+function completionForState(
+  state: ReturnType<typeof useResumeEditorState>,
+): Record<EditorSection, boolean> {
+  return {
+    profile: Boolean(state.profile.fullName && state.profile.professionalTitle),
+    summary: Boolean(state.summaryText.trim()),
+    work: state.work.length > 0,
+    education: state.education.length > 0,
+    skills: state.skills.length > 0,
+    projects: state.projects.length > 0,
+    certifications: state.certifications.length > 0,
+    languages: state.languages.length > 0,
+    awards: state.awards.length > 0,
+    volunteer: state.volunteer.length > 0,
+    settings: true,
+  }
 }
+
 function Navigation({
   current,
   setCurrent,
   complete,
+  dirty,
 }: {
-  current: Section
-  setCurrent: (v: Section) => void
-  complete: Record<Section, boolean>
+  current: EditorSection
+  setCurrent: (value: EditorSection) => void
+  complete: Record<EditorSection, boolean>
+  dirty: Record<EditorSection, boolean>
 }) {
-  const items: [Section, any][] = [
+  const items: [EditorSection, typeof UserRound][] = [
     ['profile', UserRound],
     ['summary', Sparkles],
     ['work', BriefcaseBusiness],
     ['education', GraduationCap],
     ['skills', FileText],
     ['projects', FolderKanban],
-    ['settings', SlidersHorizontal],
+    ['certifications', FileBadge],
+    ['languages', Languages],
+    ['awards', Award],
+    ['volunteer', UsersRound],
+    ['settings', Settings2],
   ]
   return (
     <aside className="card h-fit border border-base-300 bg-base-100">
       <div className="card-body p-3">
+        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-base-content/50">
+          Build your resume
+        </p>
         <nav aria-label="Resume sections">
-          <ul className="menu p-0">
+          <ul className="menu menu-sm p-0">
             {items.map(([key, Icon]) => (
               <li key={key}>
                 <button
                   className={current === key ? 'menu-active' : ''}
                   onClick={() => setCurrent(key)}
                 >
-                  <Icon size={17} />
-                  {labels[key]}
-                  {complete[key] && (
-                    <span className="ml-auto text-success">✓</span>
-                  )}
+                  <Icon size={16} />
+                  <span className="min-w-0 flex-1 truncate">{labels[key]}</span>
+                  {dirty[key] ? (
+                    <span
+                      className="badge badge-warning badge-xs"
+                      title="Unsaved changes"
+                    >
+                      !
+                    </span>
+                  ) : complete[key] ? (
+                    <Check className="text-success" size={15} />
+                  ) : null}
                 </button>
               </li>
             ))}
@@ -432,558 +585,5 @@ function Navigation({
         </nav>
       </div>
     </aside>
-  )
-}
-function Profile({ values, setValues }: any) {
-  return (
-    <>
-      <p className="text-sm text-base-content/65">
-        Start with the details employers use to contact you.
-      </p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {fields.map((field) => (
-          <fieldset className="fieldset" key={field.key}>
-            <legend className="fieldset-legend">{field.label}</legend>
-            <input
-              className="input w-full"
-              type={field.type ?? 'text'}
-              value={values[field.key]}
-              onChange={(e) =>
-                setValues((v: any) => ({ ...v, [field.key]: e.target.value }))
-              }
-            />
-          </fieldset>
-        ))}
-      </div>
-    </>
-  )
-}
-function Summary({ text, setText }: any) {
-  return (
-    <>
-      <p className="text-sm text-base-content/65">
-        Write a concise overview of your experience, strengths, and career
-        focus.
-      </p>
-      <textarea
-        className="textarea min-h-52 w-full"
-        maxLength={2000}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
-      <p className="text-right text-xs text-base-content/60">
-        {text.length}/2,000
-      </p>
-    </>
-  )
-}
-function Skills({ resumeId, items, setItems, fail }: any) {
-  const [name, setName] = useState('')
-  const [busy, setBusy] = useState(false)
-  async function add() {
-    setBusy(true)
-    try {
-      const item = await createResumeSkill({ data: { resumeId, name } })
-      setItems([...items, item])
-      setName('')
-    } catch (e: any) {
-      fail(e.message || 'Unable to add skill.')
-    } finally {
-      setBusy(false)
-    }
-  }
-  async function remove(id: string) {
-    try {
-      await deleteResumeSkill({ data: { resumeId, id } })
-      setItems(items.filter((v: any) => v.id !== id))
-    } catch {
-      fail('Unable to remove skill.')
-    }
-  }
-  return (
-    <>
-      <p className="text-sm text-base-content/65">
-        Add the skills most relevant to the roles you are targeting.
-      </p>
-      <div className="join w-full">
-        <input
-          aria-label="Skill"
-          className="input join-item w-full"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void add()
-          }}
-        />
-        <button
-          className="btn join-item"
-          disabled={busy}
-          onClick={() => void add()}
-        >
-          Add
-        </button>
-      </div>
-      {items.length ? (
-        <ul className="flex flex-wrap gap-2" aria-label="Skills">
-          {items.map((item: any, index: number) => (
-            <li className="badge badge-soft gap-1 py-3" key={item.id}>
-              {item.name}
-              <button
-                aria-label={`Remove ${item.name}`}
-                onClick={() => void remove(item.id)}
-              >
-                ×
-              </button>
-              <button
-                disabled={!index}
-                aria-label={`Move ${item.name} up`}
-                onClick={() =>
-                  void reorder(
-                    items,
-                    index,
-                    setItems,
-                    reorderResumeSkills,
-                    resumeId,
-                    fail,
-                  )
-                }
-              >
-                <ArrowUp size={12} />
-              </button>
-              <button
-                disabled={index === items.length - 1}
-                aria-label={`Move ${item.name} down`}
-                onClick={() =>
-                  void reorder(
-                    items,
-                    index,
-                    setItems,
-                    reorderResumeSkills,
-                    resumeId,
-                    fail,
-                    1,
-                  )
-                }
-              >
-                <ArrowDown size={12} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="alert alert-soft">No skills added</div>
-      )}
-    </>
-  )
-}
-function Entries({ kind, resumeId, items, setItems, fail }: any) {
-  const [form, setForm] = useState<any>(null)
-  const defaults: any = {
-    work: {
-      jobTitle: '',
-      company: '',
-      location: '',
-      startDate: '',
-      endDate: '',
-      isCurrent: false,
-      description: '',
-    },
-    education: {
-      institution: '',
-      qualification: '',
-      fieldOfStudy: '',
-      location: '',
-      startDate: '',
-      endDate: '',
-      description: '',
-    },
-    projects: {
-      name: '',
-      role: '',
-      description: '',
-      technologies: '',
-      projectUrl: '',
-      repositoryUrl: '',
-      startDate: '',
-      endDate: '',
-    },
-  }
-  const saveFn: any = {
-    work: saveWorkExperience,
-    education: saveEducationEntry,
-    projects: saveResumeProject,
-  }[kind]
-  const deleteFn: any = {
-    work: deleteWorkExperience,
-    education: deleteEducationEntry,
-    projects: deleteResumeProject,
-  }[kind]
-  const reorderFn: any = {
-    work: reorderWorkExperiences,
-    education: reorderEducationEntries,
-    projects: reorderResumeProjects,
-  }[kind]
-  async function save() {
-    try {
-      const result = await saveFn({ data: { resumeId, ...form } })
-      setItems(
-        form.id
-          ? items.map((v: any) => (v.id === result.id ? result : v))
-          : [...items, result],
-      )
-      setForm(null)
-      saveLandingToast({ message: 'Entry saved.', type: 'success' })
-    } catch (e: unknown) {
-      fail(userFacingError(e, 'Unable to save entry.'))
-    }
-  }
-  return (
-    <>
-      {form ? (
-        <EntryForm kind={kind} value={form} setValue={setForm} save={save} />
-      ) : (
-        <>
-          <p className="text-sm text-base-content/65">
-            {kind === 'work'
-              ? 'Add your current or previous roles to show employers your professional background.'
-              : kind === 'education'
-                ? 'Add your educational background, qualifications, or certifications.'
-                : 'Showcase personal, academic, freelance, or professional projects.'}
-          </p>
-          <button
-            className="btn btn-sm"
-            onClick={() => setForm(defaults[kind])}
-          >
-            <Plus size={16} />
-            Add{' '}
-            {kind === 'work'
-              ? 'Work Experience'
-              : kind === 'education'
-                ? 'Education'
-                : 'Project'}
-          </button>
-          {items.length ? (
-            <ul className="list">
-              {items.map((item: any, index: number) => (
-                <li className="list-row border-b border-base-300" key={item.id}>
-                  <div className="list-col-grow">
-                    <strong>
-                      {item.jobTitle || item.qualification || item.name}
-                    </strong>
-                    <p className="text-sm text-base-content/65">
-                      {item.company || item.institution || item.role}
-                    </p>
-                  </div>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => setForm(item)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    aria-label="Delete entry"
-                    onClick={() => {
-                      if (window.confirm('Delete this entry?'))
-                        void deleteFn({ data: { resumeId, id: item.id } })
-                          .then(() =>
-                            setItems(
-                              items.filter((v: any) => v.id !== item.id),
-                            ),
-                          )
-                          .catch(() => fail('Unable to delete entry.'))
-                    }}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    disabled={!index}
-                    onClick={() =>
-                      void reorder(
-                        items,
-                        index,
-                        setItems,
-                        reorderFn,
-                        resumeId,
-                        fail,
-                      )
-                    }
-                  >
-                    <ArrowUp size={15} />
-                  </button>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    disabled={index === items.length - 1}
-                    onClick={() =>
-                      void reorder(
-                        items,
-                        index,
-                        setItems,
-                        reorderFn,
-                        resumeId,
-                        fail,
-                        1,
-                      )
-                    }
-                  >
-                    <ArrowDown size={15} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="alert alert-soft">
-              No {kind === 'work' ? 'work experience' : kind} added
-            </div>
-          )}
-        </>
-      )}
-    </>
-  )
-}
-function userFacingError(error: unknown, fallback: string) {
-  if (!(error instanceof Error) || !error.message) return fallback
-  try {
-    const issues = JSON.parse(error.message)
-    if (Array.isArray(issues)) {
-      const firstMessage = issues.find(
-        (issue) => typeof issue?.message === 'string',
-      )?.message
-      if (firstMessage) return firstMessage
-    }
-  } catch {
-    // Server errors are usually already suitable for the user.
-  }
-  return error.message.startsWith('[{') ? fallback : error.message
-}
-function EntryForm({ kind, value, setValue, save }: any) {
-  const names: any = {
-    work: [
-      ['jobTitle', 'Job title'],
-      ['company', 'Company'],
-      ['location', 'Location'],
-      ['startDate', 'Start date', 'month'],
-      ['endDate', 'End date', 'month'],
-      ['description', 'Description', 'textarea'],
-    ],
-    education: [
-      ['institution', 'Institution'],
-      ['qualification', 'Qualification'],
-      ['fieldOfStudy', 'Field of study'],
-      ['location', 'Location'],
-      ['startDate', 'Start date', 'month'],
-      ['endDate', 'End date', 'month'],
-      ['description', 'Description', 'textarea'],
-    ],
-    projects: [
-      ['name', 'Project name'],
-      ['role', 'Role'],
-      ['technologies', 'Technologies (comma separated)'],
-      ['projectUrl', 'Project URL', 'url'],
-      ['repositoryUrl', 'Repository URL', 'url'],
-      ['startDate', 'Start date', 'month'],
-      ['endDate', 'End date', 'month'],
-      ['description', 'Description', 'textarea'],
-    ],
-  }[kind]
-  return (
-    <div className="grid gap-3">
-      {names.map(([key, label, type]: any) => (
-        <fieldset className="fieldset" key={key}>
-          <legend className="fieldset-legend">{label}</legend>
-          {type === 'textarea' ? (
-            <textarea
-              className="textarea w-full"
-              value={value[key]}
-              onChange={(e) => setValue({ ...value, [key]: e.target.value })}
-            />
-          ) : (
-            <input
-              className="input w-full"
-              type={type || 'text'}
-              disabled={key === 'endDate' && value.isCurrent}
-              value={value[key]}
-              onChange={(e) => setValue({ ...value, [key]: e.target.value })}
-            />
-          )}
-        </fieldset>
-      ))}
-      {kind === 'work' && (
-        <label className="label justify-start gap-2">
-          <input
-            className="checkbox"
-            type="checkbox"
-            checked={value.isCurrent}
-            onChange={(e) =>
-              setValue({
-                ...value,
-                isCurrent: e.target.checked,
-                endDate: e.target.checked ? '' : value.endDate,
-              })
-            }
-          />
-          Currently working here
-        </label>
-      )}
-      <div className="card-actions justify-end">
-        <button className="btn" onClick={save}>
-          Save entry
-        </button>
-      </div>
-    </div>
-  )
-}
-async function reorder(
-  items: any[],
-  index: number,
-  setItems: any,
-  action: any,
-  resumeId: string,
-  fail: any,
-  direction = -1,
-) {
-  const next = [...items]
-  const target = index + direction
-  ;[next[index], next[target]] = [next[target], next[index]]
-  setItems(next)
-  try {
-    await action({ data: { resumeId, ids: next.map((v) => v.id) } })
-  } catch {
-    setItems(items)
-    fail('Unable to reorder entries.')
-  }
-}
-function TemplateSelector({ active, onSelect }: any) {
-  return (
-    <fieldset className="fieldset">
-      <legend className="fieldset-legend">Template</legend>
-      <p className="label mb-2">
-        Choose a template. Page size and margins use print-ready A4 defaults.
-      </p>
-      <div className="grid gap-2 sm:grid-cols-3">
-        {resumeTemplates.map((template) => (
-          <button
-            key={template.id}
-            type="button"
-            className={`card card-border text-left ${active === template.id ? 'border-primary' : ''}`}
-            aria-pressed={active === template.id}
-            onClick={() => onSelect(template.id)}
-          >
-            <span
-              className={`block h-12 rounded-t-box ${template.id === 'classic' ? 'bg-base-300' : template.id === 'modern' ? 'bg-info/25' : 'bg-base-200'}`}
-            />
-            <span className="block p-3 text-sm font-semibold">
-              {template.displayName}
-              {active === template.id && (
-                <span className="badge badge-success badge-xs ml-2">
-                  Active
-                </span>
-              )}
-              <small className="mt-1 block font-normal text-base-content/60">
-                {template.description}
-              </small>
-            </span>
-          </button>
-        ))}
-      </div>
-    </fieldset>
-  )
-}
-function Preview(props: any) {
-  const normalized = useMemo(
-    () => normalizeResume(props),
-    [
-      props.resume,
-      props.profile,
-      props.summary,
-      props.work,
-      props.education,
-      props.skills,
-      props.projects,
-    ],
-  )
-  const Template = getResumeTemplate(props.templateId).renderer
-  const pagesRef = useRef<HTMLDivElement>(null)
-  const sourceTemplateRef = useRef<{
-    key: string
-    template: HTMLElement
-  } | null>(null)
-  const paginationKey = JSON.stringify(normalized)
-  useLayoutEffect(() => {
-    const pages = pagesRef.current
-    const firstPage = pages?.querySelector<HTMLElement>('.resume-page')
-    const firstTemplate =
-      firstPage?.querySelector<HTMLElement>('.resume-template')
-    if (!pages || !firstPage || !firstTemplate) return
-    pages
-      .querySelectorAll('.resume-page:not(:first-child)')
-      .forEach((page) => page.remove())
-    if (sourceTemplateRef.current?.key === paginationKey) {
-      firstTemplate.replaceChildren(
-        ...Array.from(sourceTemplateRef.current.template.childNodes).map(
-          (node) => node.cloneNode(true),
-        ),
-      )
-    } else {
-      sourceTemplateRef.current = {
-        key: paginationKey,
-        template: firstTemplate.cloneNode(true) as HTMLElement,
-      }
-    }
-
-    const createPage = () => {
-      const page = firstPage.cloneNode(false) as HTMLElement
-      const template = firstTemplate.cloneNode(false) as HTMLElement
-      page.append(template)
-      pages.append(page)
-      return { page, template }
-    }
-    const splitLastSection = (page: HTMLElement, template: HTMLElement) => {
-      const sections = Array.from(
-        template.querySelectorAll<HTMLElement>(':scope > .resume-section'),
-      )
-      const section = sections.at(-1)
-      if (!section) return false
-      const next = createPage()
-      if (sections.length > 1) {
-        next.template.prepend(section)
-        return true
-      }
-
-      const sectionItems = Array.from(section.children).slice(1)
-      const item = sectionItems.at(-1)
-      if (!item) return false
-      const continuation = section.cloneNode(false) as HTMLElement
-      const heading = section.querySelector('h2')
-      if (heading) continuation.append(heading.cloneNode(true))
-      continuation.append(item)
-      next.template.append(continuation)
-      return true
-    }
-
-    const pageList = [firstPage]
-    for (const page of pageList) {
-      const template = page.querySelector<HTMLElement>('.resume-template')
-      if (!template) continue
-      while (page.scrollHeight > page.clientHeight) {
-        const existingPages = pages.querySelectorAll('.resume-page').length
-        if (existingPages > 12 || !splitLastSection(page, template)) break
-        const nextPage = pages.lastElementChild as HTMLElement
-        pageList.push(nextPage)
-      }
-    }
-  }, [paginationKey])
-  return (
-    <div className="resume-preview-shell rounded-box border border-base-300 bg-base-300 p-3 sm:p-4">
-      <div className="resume-pages" ref={pagesRef}>
-        <article
-          className="resume-page mx-auto bg-white shadow-xl"
-          key={paginationKey}
-        >
-          <Template resume={normalized} />
-        </article>
-      </div>
-    </div>
   )
 }

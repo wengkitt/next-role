@@ -78,6 +78,8 @@ export const resumes = sqliteTable(
     })
       .notNull()
       .default('classic'),
+    sectionOrder: text('section_order').notNull().default('[]'),
+    hiddenSections: text('hidden_sections').notNull().default('[]'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
   },
@@ -218,6 +220,94 @@ export const resumeProjects = sqliteTable(
   },
   (table) => [
     index('resume_projects_resume_sort_idx').on(
+      table.resumeId,
+      table.sortOrder,
+    ),
+  ],
+)
+
+export const resumeCertifications = sqliteTable(
+  'resume_certifications',
+  {
+    id: text('id').primaryKey(),
+    resumeId: text('resume_id')
+      .notNull()
+      .references(() => resumes.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    issuer: text('issuer'),
+    date: text('date'),
+    credentialUrl: text('credential_url'),
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    index('resume_certifications_resume_sort_idx').on(
+      table.resumeId,
+      table.sortOrder,
+    ),
+  ],
+)
+
+export const resumeLanguages = sqliteTable(
+  'resume_languages',
+  {
+    id: text('id').primaryKey(),
+    resumeId: text('resume_id')
+      .notNull()
+      .references(() => resumes.id, { onDelete: 'cascade' }),
+    language: text('language').notNull(),
+    proficiency: text('proficiency'),
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    index('resume_languages_resume_sort_idx').on(
+      table.resumeId,
+      table.sortOrder,
+    ),
+  ],
+)
+
+export const resumeAwards = sqliteTable(
+  'resume_awards',
+  {
+    id: text('id').primaryKey(),
+    resumeId: text('resume_id')
+      .notNull()
+      .references(() => resumes.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    issuer: text('issuer'),
+    date: text('date'),
+    description: text('description'),
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    index('resume_awards_resume_sort_idx').on(table.resumeId, table.sortOrder),
+  ],
+)
+
+export const resumeVolunteer = sqliteTable(
+  'resume_volunteer',
+  {
+    id: text('id').primaryKey(),
+    resumeId: text('resume_id')
+      .notNull()
+      .references(() => resumes.id, { onDelete: 'cascade' }),
+    organization: text('organization').notNull(),
+    role: text('role'),
+    startDate: text('start_date'),
+    endDate: text('end_date'),
+    description: text('description'),
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    index('resume_volunteer_resume_sort_idx').on(
       table.resumeId,
       table.sortOrder,
     ),
