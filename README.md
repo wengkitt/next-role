@@ -1,232 +1,212 @@
-Welcome to your new TanStack Start app!
+# NextRole
 
-# Getting Started
+NextRole is a professional resume builder for creating, managing, and exporting tailored resumes. Users can create multiple resume versions, edit structured resume sections, choose a visual template, review resume-quality suggestions, and export a searchable PDF.
 
-To run this application:
+## Features
+
+- Email-and-password authentication with Better Auth
+- Multiple resume versions with rename, duplicate, and delete actions
+- Structured editing for:
+  - Personal information and professional summary
+  - Work experience and education
+  - Skills and projects
+  - Certifications, languages, awards, and volunteer work
+- Three PDF templates: Classic ATS, Modern ATS, and Minimal
+- Reorderable and hideable resume sections
+- Live A4 PDF preview with page count feedback
+- PDF export with selectable text
+- Resume quality checks for completeness, clarity, measurable outcomes, and document length
+- Light/dark theme selection
+
+## Tech stack
+
+- [TanStack Start](https://tanstack.com/start) and [TanStack Router](https://tanstack.com/router)
+- React and TypeScript
+- Vite
+- Tailwind CSS and [daisyUI](https://daisyui.com/)
+- [Better Auth](https://www.better-auth.com/) for authentication
+- [Drizzle ORM](https://orm.drizzle.team/) with [Cloudflare D1](https://developers.cloudflare.com/d1/)
+- [Cloudflare Workers](https://developers.cloudflare.com/workers/) for deployment
+- [React PDF](https://react-pdf.org/) and `pdf-lib` for PDF generation and inspection
+- Vitest, Oxlint, and Oxfmt for testing, linting, and formatting
+
+## Prerequisites
+
+- Node.js with [pnpm](https://pnpm.io/) enabled
+- OpenSSL, used to generate a local authentication secret
+- A Cloudflare account is required for remote D1 migrations and deployment
+
+## Getting started
+
+Install dependencies:
 
 ```bash
 pnpm install
+```
+
+Create local Better Auth variables. Copy the example file, then set `BETTER_AUTH_SECRET` to the output of the `openssl` command:
+
+```bash
+cp .dev.vars.example .dev.vars
+openssl rand -base64 32
+```
+
+The local variables should contain:
+
+```dotenv
+BETTER_AUTH_SECRET=<generated-secret>
+BETTER_AUTH_URL=http://localhost:3000
+```
+
+Initialize the local Cloudflare D1 database from the checked-in migrations:
+
+```bash
+pnpm db:migrate:local
+```
+
+Start the development server:
+
+```bash
 pnpm dev
 ```
 
-# Building For Production
+Open [http://localhost:3000](http://localhost:3000), create an account, and start building a resume.
 
-To build this application for production:
+## Environment variables
+
+### Local application variables
+
+`.dev.vars` is used by the local Cloudflare Worker runtime and is ignored by Git. Copy `.dev.vars.example` and provide:
+
+| Variable             | Purpose                                                            |
+| -------------------- | ------------------------------------------------------------------ |
+| `BETTER_AUTH_SECRET` | Secret used to sign Better Auth sessions.                          |
+| `BETTER_AUTH_URL`    | Base URL used by Better Auth; use `http://localhost:3000` locally. |
+
+### Drizzle Kit variables
+
+The optional `.env` file is used by Drizzle Kit when connecting to the remote D1 database over HTTP. Copy `.env.example` and fill in the Cloudflare account ID, D1 database ID, and a token with D1 edit permissions:
 
 ```bash
+cp .env.example .env
+```
+
+Do not expose these values to browser code or commit `.env`.
+
+## Database workflow
+
+The Drizzle schema lives in [`src/db/schema.ts`](src/db/schema.ts), and generated migrations live in [`drizzle/`](drizzle/).
+
+After changing the schema:
+
+```bash
+pnpm db:generate
+pnpm db:migrate:local
+```
+
+To apply the existing migrations to the configured remote D1 database:
+
+```bash
+pnpm db:migrate:remote
+```
+
+To inspect the database with Drizzle Studio:
+
+```bash
+# Local D1 database
+pnpm db:studio:local
+
+# Remote D1 database; requires the variables in .env
+pnpm db:studio:remote
+```
+
+Keep database access in server-side code. The database binding is available through `src/db/index.ts` and should not be imported into browser-only modules.
+
+## Available scripts
+
+| Command                  | Description                                         |
+| ------------------------ | --------------------------------------------------- |
+| `pnpm dev`               | Start the Vite development server on port 3000.     |
+| `pnpm build`             | Build the application for production.               |
+| `pnpm preview`           | Build and preview the production bundle locally.    |
+| `pnpm test`              | Run the Vitest test suite.                          |
+| `pnpm lint`              | Check the project with Oxlint.                      |
+| `pnpm lint:fix`          | Automatically fix supported Oxlint issues.          |
+| `pnpm fmt`               | Format the project with Oxfmt.                      |
+| `pnpm fmt:check`         | Check formatting without changing files.            |
+| `pnpm generate-routes`   | Regenerate TanStack Router's file-based route tree. |
+| `pnpm db:generate`       | Generate Drizzle migrations from the schema.        |
+| `pnpm db:migrate:local`  | Apply migrations to local D1.                       |
+| `pnpm db:migrate:remote` | Apply migrations to remote D1.                      |
+| `pnpm cf-typegen`        | Regenerate Cloudflare Worker binding types.         |
+| `pnpm deploy`            | Build and deploy the Worker with Wrangler.          |
+
+Before committing changes, run:
+
+```bash
+pnpm test
+pnpm lint
+pnpm fmt:check
 pnpm build
 ```
 
-## Styling
+## Deployment
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+The application is configured for Cloudflare Workers through [`wrangler.jsonc`](wrangler.jsonc). Before deploying:
 
-### Removing Tailwind CSS
+1. Authenticate Wrangler:
 
-If you prefer not to use Tailwind CSS:
+   ```bash
+   pnpm exec wrangler login
+   ```
 
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Remove `@tailwindcss/vite` and `tailwindcss` from `package.json`
+2. Configure `BETTER_AUTH_URL` as a production Worker variable in `wrangler.jsonc` or the Cloudflare dashboard.
 
-## Linting & Formatting
+3. Store the production authentication secret as a Worker secret:
 
-This project uses [Oxlint](https://oxc.rs/docs/guide/usage/linter/) for linting and [Oxfmt](https://oxc.rs/docs/guide/usage/formatter/) for formatting. The following scripts are available:
+   ```bash
+   pnpm exec wrangler secret put BETTER_AUTH_SECRET
+   ```
 
-```bash
-pnpm lint
-pnpm lint:fix
-pnpm fmt
-pnpm fmt:check
+4. Apply the database migrations to the remote D1 database:
+
+   ```bash
+   pnpm db:migrate:remote
+   ```
+
+5. Build and deploy:
+
+   ```bash
+   pnpm deploy
+   ```
+
+The `DB` D1 binding and migration directory are already declared in `wrangler.jsonc`. Review that configuration before deploying to a different Cloudflare account or database.
+
+## Project structure
+
+```text
+src/
+├── routes/            TanStack file-based routes and server endpoints
+├── components/        Landing page, dashboard, auth, and editor UI
+├── data/              Authenticated server functions and validation schemas
+├── db/                Drizzle schema and Cloudflare D1 connection
+├── auth/              Better Auth configuration and session helpers
+├── lib/                Resume normalization, quality checks, and shared logic
+└── resume-templates/  React PDF document and template definitions
+
+drizzle/               Generated D1/SQLite migrations
+wrangler.jsonc         Cloudflare Worker and D1 configuration
+vite.config.ts         Vite, TanStack Start, Tailwind, and Cloudflare setup
 ```
 
-## Deploy to Cloudflare Workers
+Routes are generated from files in `src/routes`. The main application areas are:
 
-This project uses the Cloudflare Vite plugin (configured in `vite.config.ts`) and `wrangler.jsonc`:
+- `/` — public landing page
+- `/sign-in` and `/sign-up` — authentication
+- `/app/resumes` — authenticated resume dashboard
+- `/app/resumes/:resumeId/edit` — resume editor and PDF preview
+- `/app/settings` — authenticated settings page
 
-1. Install Wrangler: `npm install -g wrangler`
-2. Authenticate: `wrangler login`
-3. Deploy: `npx wrangler deploy`
+## License
 
-For production env vars, run `wrangler secret put MY_VAR` for each secret listed in `.env.example`. Public (non-secret) vars go in `wrangler.jsonc` under `vars`.
-
-KV, D1, R2, and Durable Object bindings are configured in `wrangler.jsonc` — see https://developers.cloudflare.com/workers/wrangler/configuration/.
-
-### D1 and Drizzle ORM
-
-The project is configured with a local D1 binding named `DB`, Drizzle schema in
-`src/db/schema.ts`, and generated SQL migrations in `drizzle/`.
-
-1. Authenticate with Cloudflare, then create the database:
-   `pnpm exec wrangler d1 create next-role-db`
-2. Copy the returned database UUID into `wrangler.jsonc` at
-   `d1_databases[0].database_id`.
-3. Copy `.env.example` to `.env` and add the account ID, database ID, and a
-   D1-edit API token. These values are only needed by Drizzle Kit's HTTP client.
-4. Generate a migration after changing `src/db/schema.ts`:
-   `pnpm db:generate`
-5. Apply migrations locally with `pnpm db:migrate:local`, or to D1 with
-   `pnpm db:migrate:remote`.
-
-Use `db` from `src/db/index.ts` only in server-side code (server functions,
-loaders, or server routes). It is backed by the Worker binding and must not be
-imported by a browser-only module.
-
-### Authentication
-
-Better Auth handles email-and-password sign-up, sign-in, sessions, and sign-out
-at `/api/auth/*`. Email verification is intentionally disabled. For local
-development, copy `.dev.vars.example` to `.dev.vars`, generate a 32-byte secret
-with `openssl rand -base64 32`, and set `BETTER_AUTH_SECRET` there.
-
-Before deploying, set the secret with `pnpm exec wrangler secret put
-BETTER_AUTH_SECRET`, then configure `BETTER_AUTH_URL` to the production app URL.
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from '@tanstack/react-router'
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+No license has been specified yet.
