@@ -511,7 +511,6 @@ function ResumeContent({
             {data.languages.map((item) => (
               <Text style={styles.compactLine} key={item.id}>
                 <Text style={styles.entryTitle}>{item.language}</Text>
-                {item.proficiency && ` - ${item.proficiency}`}
               </Text>
             ))}
           </DocumentSection>

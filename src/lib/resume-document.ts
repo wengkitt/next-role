@@ -69,7 +69,6 @@ export type ResumeCertificationData = {
 export type ResumeLanguageData = {
   id: string
   language: string
-  proficiency: string
 }
 
 export type ResumeAwardData = {
@@ -248,7 +247,6 @@ export function normalizeResumeDocument(
     languages: sortByOrder(input.languages ?? []).map((item) => ({
       id: item.id,
       language: text(item.language),
-      proficiency: text(item.proficiency),
     })),
     awards: sortByOrder(input.awards ?? []).map((item) => ({
       id: item.id,
@@ -270,9 +268,9 @@ export function normalizeResumeDocument(
     sectionOrder: input.sectionPreferences?.order ?? [
       'summary',
       'experience',
+      'education',
       'skills',
       'projects',
-      'education',
       'certifications',
       'languages',
       'awards',

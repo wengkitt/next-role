@@ -77,6 +77,14 @@ describe('resume document normalization', () => {
   })
 
   it('normalizes optional sections and hides empty sections in the data contract', () => {
+    const defaultOrder = normalizeResumeDocument(input)
+    expect(defaultOrder.sectionOrder.slice(0, 4)).toEqual([
+      'summary',
+      'experience',
+      'education',
+      'skills',
+    ])
+
     const normalized = normalizeResumeDocument({
       ...input,
       certifications: [

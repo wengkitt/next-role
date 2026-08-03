@@ -196,7 +196,6 @@ export const languageSchema = z.object({
   resumeId: resumeIdSchema,
   id: z.string().min(1).optional(),
   language: z.string().trim().min(1, 'Language is required.').max(100),
-  proficiency: optionalEntryText,
 })
 
 export const awardSchema = z.object({
