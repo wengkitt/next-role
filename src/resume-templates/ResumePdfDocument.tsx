@@ -68,13 +68,23 @@ const styles = StyleSheet.create({
   },
   contact: {
     color: colors.muted,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     fontSize: 8.5,
     marginTop: 8,
   },
-  contactItem: {
+  contactRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  contactLinks: {
+    marginTop: 2,
+  },
+  contactLink: {
     color: colors.muted,
+    marginTop: 2,
+  },
+  contactLabel: {
+    color: colors.ink,
+    fontWeight: 700,
   },
   contactSeparator: {
     color: colors.rule,
@@ -191,31 +201,44 @@ const styles = StyleSheet.create({
   },
 })
 
-const displayUrl = (url: string, label: string) => ({ url, label })
+const displayUrl = (url: string, label: string) => ({ label, url })
 
 function ContactLine({ data }: { data: ResumeDocumentData['profile'] }) {
   const items: Array<{ label: string; href?: string }> = []
+  const urls: Array<{ label: string; url: string }> = []
   if (data.email)
     items.push({ label: data.email, href: `mailto:${data.email}` })
   if (data.phone) items.push({ label: data.phone, href: `tel:${data.phone}` })
   if (data.location) items.push({ label: data.location })
-  if (data.website) items.push(displayUrl(data.website, 'Portfolio'))
-  if (data.linkedinUrl) items.push(displayUrl(data.linkedinUrl, 'LinkedIn'))
-  if (data.githubUrl) items.push(displayUrl(data.githubUrl, 'GitHub'))
+  if (data.website) urls.push(displayUrl(data.website, 'Portfolio'))
+  if (data.linkedinUrl) urls.push(displayUrl(data.linkedinUrl, 'LinkedIn'))
+  if (data.githubUrl) urls.push(displayUrl(data.githubUrl, 'GitHub'))
   return (
     <View style={styles.contact}>
-      {items.map((item, index) => (
-        <Fragment key={`${item.label}-${index}`}>
-          {index > 0 && <Text style={styles.contactSeparator}>|</Text>}
-          {item.href ? (
-            <Link src={item.href} style={styles.link}>
-              {item.label}
-            </Link>
-          ) : (
-            <Text>{item.label}</Text>
-          )}
-        </Fragment>
-      ))}
+      <View style={styles.contactRow}>
+        {items.map((item, index) => (
+          <Fragment key={`${item.label}-${index}`}>
+            {index > 0 && <Text style={styles.contactSeparator}>|</Text>}
+            {item.href ? (
+              <Link src={item.href} style={styles.link}>
+                {item.label}
+              </Link>
+            ) : (
+              <Text>{item.label}</Text>
+            )}
+          </Fragment>
+        ))}
+      </View>
+      {urls.length > 0 && (
+        <View style={styles.contactLinks}>
+          {urls.map((item) => (
+            <Text key={item.label} style={styles.contactLink}>
+              <Text style={styles.contactLabel}>{item.label}: </Text>
+              {item.url}
+            </Text>
+          ))}
+        </View>
+      )}
     </View>
   )
 }
