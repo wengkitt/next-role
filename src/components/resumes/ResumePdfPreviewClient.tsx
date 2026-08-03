@@ -25,16 +25,39 @@ export default function ResumePdfPreviewClient({
   title: string
   onPageCountChange?: (pageCount: number) => void
 }) {
+  const documentKey = useMemo(
+    () => JSON.stringify([templateId, data]),
+    [data, templateId],
+  )
+
+  return (
+    <ResumePdfDocumentPreview
+      key={documentKey}
+      data={data}
+      templateId={templateId}
+      title={title}
+      onPageCountChange={onPageCountChange}
+    />
+  )
+}
+
+function ResumePdfDocumentPreview({
+  data,
+  templateId,
+  title,
+  onPageCountChange,
+}: {
+  data: ResumeDocumentData
+  templateId: TemplateId
+  title: string
+  onPageCountChange?: (pageCount: number) => void
+}) {
   const document = useMemo(
     () => <ResumePdfDocument data={data} templateId={templateId} />,
     [data, templateId],
   )
-  const [instance, updateInstance] = usePDF({ document })
+  const [instance] = usePDF({ document })
   const [pageCount, setPageCount] = useState<number | null>(null)
-
-  useEffect(() => {
-    updateInstance(document)
-  }, [document, updateInstance])
 
   useEffect(() => {
     let active = true
