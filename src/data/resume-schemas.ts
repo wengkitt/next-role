@@ -16,7 +16,7 @@ export const renameResumeSchema = z.object({
 export const resumeActionSchema = z.object({ resumeId: resumeIdSchema })
 export const templateSchema = z.object({
   resumeId: resumeIdSchema,
-  templateId: z.enum(['classic', 'modern', 'minimal']),
+  templateId: z.enum(['classic', 'minimal']),
 })
 
 export const resumeSectionSchema = z.enum([
@@ -196,7 +196,6 @@ export const languageSchema = z.object({
   resumeId: resumeIdSchema,
   id: z.string().min(1).optional(),
   language: z.string().trim().min(1, 'Language is required.').max(100),
-  proficiency: optionalEntryText,
 })
 
 export const awardSchema = z.object({

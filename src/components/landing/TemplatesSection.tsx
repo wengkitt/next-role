@@ -19,7 +19,7 @@ export function TemplatesSection() {
               key={template.id}
             >
               <div
-                className={`p-6 ${template.id === 'modern' ? 'bg-base-300' : 'bg-base-200'}`}
+                className={`p-6 ${template.id === 'classic' ? 'bg-base-300' : 'bg-base-200'}`}
               >
                 <div className="mx-auto max-w-[12rem] shadow-md">
                   <ResumeDocument compact templateId={template.id} />

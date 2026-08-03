@@ -23,7 +23,7 @@ export type ResumeSummary = {
   id: string
   title: string
   status: 'draft' | 'complete' | 'archived'
-  templateId: 'classic' | 'modern' | 'minimal'
+  templateId: 'classic' | 'minimal'
   createdAt: string
   updatedAt: string
 }
@@ -100,7 +100,6 @@ export type ResumeCertification = {
 export type ResumeLanguage = {
   id: string
   language: string
-  proficiency: string
   sortOrder: number
 }
 export type ResumeAward = {
@@ -135,17 +134,22 @@ const toSummary = (resume: {
   id: string
   title: string
   status: ResumeSummary['status']
-  templateId: ResumeSummary['templateId']
+  templateId: string
   createdAt: Date
   updatedAt: Date
 }): ResumeSummary => ({
   id: resume.id,
   title: resume.title,
   status: resume.status,
-  templateId: resume.templateId,
+  templateId: normalizeTemplateId(resume.templateId),
   createdAt: resume.createdAt.toISOString(),
   updatedAt: resume.updatedAt.toISOString(),
 })
+
+const normalizeTemplateId = (
+  templateId: string,
+): ResumeSummary['templateId'] =>
+  templateId === 'minimal' ? 'minimal' : 'classic'
 
 export const getResumeSummaries = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -236,7 +240,7 @@ export const saveResumeSectionPreferences = createServerFn({ method: 'POST' })
     const result = await db
       .update(resumes)
       .set({
-        sectionOrder: JSON.stringify(data.order),
+        sectionOrder: JSON.stringify(defaultSectionOrder),
         hiddenSections: JSON.stringify(data.hidden),
         updatedAt: now,
       })
@@ -244,7 +248,7 @@ export const saveResumeSectionPreferences = createServerFn({ method: 'POST' })
       .returning({ id: resumes.id })
     if (!result[0]) throw new Error('Resume not found')
     return {
-      order: data.order,
+      order: defaultSectionOrder,
       hidden: data.hidden,
       updatedAt: now.toISOString(),
     }
@@ -271,7 +275,7 @@ export const duplicateResume = createServerFn({ method: 'POST' })
       userId: user.id,
       title: `${source.title} Copy`,
       status: 'draft' as const,
-      templateId: source.templateId,
+      templateId: normalizeTemplateId(source.templateId),
       createdAt: now,
       updatedAt: now,
     }
@@ -419,29 +423,23 @@ export const getResumeEditorData = createServerFn({ method: 'GET' })
       languages: languages.map(languageResult),
       awards: awards.map(awardResult),
       volunteer: volunteer.map(volunteerResult),
-      sectionPreferences: parseSectionPreferences(
-        resume.sectionOrder,
-        resume.hiddenSections,
-      ),
+      sectionPreferences: parseSectionPreferences(resume.hiddenSections),
     }
   })
 
 const defaultSectionOrder: ResumeSectionId[] = [
   'summary',
   'experience',
+  'education',
   'skills',
   'projects',
-  'education',
   'certifications',
   'languages',
   'awards',
   'volunteer',
 ]
 
-function parseSectionPreferences(
-  order: string,
-  hidden: string,
-): ResumeSectionPreferences {
+function parseSectionPreferences(hidden: string): ResumeSectionPreferences {
   const isSection = (value: unknown): value is ResumeSectionId =>
     typeof value === 'string' &&
     defaultSectionOrder.includes(value as ResumeSectionId)
@@ -453,12 +451,8 @@ function parseSectionPreferences(
       return []
     }
   }
-  const configured = read(order)
   return {
-    order: [
-      ...configured,
-      ...defaultSectionOrder.filter((item) => !configured.includes(item)),
-    ],
+    order: [...defaultSectionOrder],
     hidden: read(hidden),
   }
 }
@@ -627,7 +621,11 @@ function certificationResult(row: any): ResumeCertification {
   }
 }
 function languageResult(row: any): ResumeLanguage {
-  return { ...row, proficiency: row.proficiency ?? '' }
+  return {
+    id: row.id,
+    language: row.language,
+    sortOrder: row.sortOrder,
+  }
 }
 function awardResult(row: any): ResumeAward {
   return {
@@ -986,26 +984,6 @@ export const reorderWorkExperiences = createServerFn({ method: 'POST' })
 export const reorderEducationEntries = createServerFn({ method: 'POST' })
   .validator(reorderSchema)
   .handler(({ data }) => reorderSection('educationEntries')({ data } as any))
-export const reorderResumeProjects = createServerFn({ method: 'POST' })
-  .validator(reorderSchema)
-  .handler(({ data }) => reorderSection('resumeProjects')({ data } as any))
-export const reorderResumeSkills = createServerFn({ method: 'POST' })
-  .validator(reorderSchema)
-  .handler(({ data }) => reorderSection('resumeSkills')({ data } as any))
-export const reorderResumeCertifications = createServerFn({ method: 'POST' })
-  .validator(reorderSchema)
-  .handler(({ data }) =>
-    reorderSection('resumeCertifications')({ data } as any),
-  )
-export const reorderResumeLanguages = createServerFn({ method: 'POST' })
-  .validator(reorderSchema)
-  .handler(({ data }) => reorderSection('resumeLanguages')({ data } as any))
-export const reorderResumeAwards = createServerFn({ method: 'POST' })
-  .validator(reorderSchema)
-  .handler(({ data }) => reorderSection('resumeAwards')({ data } as any))
-export const reorderResumeVolunteer = createServerFn({ method: 'POST' })
-  .validator(reorderSchema)
-  .handler(({ data }) => reorderSection('resumeVolunteer')({ data } as any))
 
 export const saveResumeCertification = createServerFn({ method: 'POST' })
   .validator(certificationSchema)
@@ -1078,7 +1056,6 @@ export const saveResumeLanguage = createServerFn({ method: 'POST' })
     const now = new Date()
     const values = {
       language: data.language,
-      proficiency: nullable(data.proficiency),
       updatedAt: now,
     }
     let row

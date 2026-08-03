@@ -19,12 +19,6 @@ import {
   deleteResumeVolunteer,
   deleteWorkExperience,
   reorderEducationEntries,
-  reorderResumeAwards,
-  reorderResumeCertifications,
-  reorderResumeLanguages,
-  reorderResumeProjects,
-  reorderResumeSkills,
-  reorderResumeVolunteer,
   reorderWorkExperiences,
   saveEducationEntry,
   saveResumeAward,
@@ -37,18 +31,11 @@ import {
 import type { ResumeSectionPreferences, ResumeSkill } from '#/data/resumes'
 import type { ProfileValues } from '#/data/resume-schemas'
 import type { ResumeDocumentSection } from '#/lib/resume-document'
+import { popularLanguages } from '#/lib/languages'
 import { userFacingError } from '#/lib/user-facing-error'
 import { resumeTemplates } from '#/resume-templates/registry'
 import type { TemplateId } from '#/resume-templates/registry'
-import {
-  ArrowDown,
-  ArrowUp,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  Save,
-  Trash2,
-} from 'lucide-react'
+import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 const fields: { key: keyof ProfileValues; label: string; type?: string }[] = [
@@ -228,22 +215,6 @@ export function Skills({
       fail(userFacingError(error, 'Unable to remove skill.'))
     }
   }
-  async function move(index: number, direction: -1 | 1) {
-    const target = index + direction
-    if (target < 0 || target >= items.length) return
-    const next = [...items]
-    ;[next[index], next[target]] = [next[target], next[index]]
-    setItems(next)
-    try {
-      await reorderResumeSkills({
-        data: { resumeId, ids: next.map((item) => item.id) },
-      })
-      onSaved()
-    } catch (error) {
-      setItems(items)
-      fail(userFacingError(error, 'Unable to reorder skills.'))
-    }
-  }
   return (
     <div className="grid gap-4">
       <p className="text-sm text-base-content/65">
@@ -272,28 +243,12 @@ export function Skills({
       </div>
       {items.length ? (
         <ul className="grid gap-2" aria-label="Skills">
-          {items.map((item, index) => (
+          {items.map((item) => (
             <li
               className="flex items-center gap-2 rounded-box border border-base-300 p-2"
               key={item.id}
             >
               <span className="min-w-0 flex-1 text-sm">{item.name}</span>
-              <button
-                className="btn btn-ghost btn-xs"
-                disabled={!index}
-                aria-label={`Move ${item.name} up`}
-                onClick={() => void move(index, -1)}
-              >
-                <ArrowUp size={13} />
-              </button>
-              <button
-                className="btn btn-ghost btn-xs"
-                disabled={index === items.length - 1}
-                aria-label={`Move ${item.name} down`}
-                onClick={() => void move(index, 1)}
-              >
-                <ArrowDown size={13} />
-              </button>
               <button
                 className="btn btn-ghost btn-xs text-error"
                 aria-label={`Remove ${item.name}`}
@@ -360,7 +315,7 @@ const entryDefaults: Record<EntryKind, Record<string, string | boolean>> = {
     endDate: '',
   },
   certifications: { name: '', issuer: '', date: '', credentialUrl: '' },
-  languages: { language: '', proficiency: '' },
+  languages: { language: '' },
   awards: { title: '', issuer: '', date: '', description: '' },
   volunteer: {
     organization: '',
@@ -373,7 +328,7 @@ const entryDefaults: Record<EntryKind, Record<string, string | boolean>> = {
 
 const entryActions: Record<
   EntryKind,
-  { save: any; remove: any; reorder: any; schema: any }
+  { save: any; remove: any; reorder?: any; schema: any }
 > = {
   work: {
     save: saveWorkExperience,
@@ -390,31 +345,26 @@ const entryActions: Record<
   projects: {
     save: saveResumeProject,
     remove: deleteResumeProject,
-    reorder: reorderResumeProjects,
     schema: projectSchema,
   },
   certifications: {
     save: saveResumeCertification,
     remove: deleteResumeCertification,
-    reorder: reorderResumeCertifications,
     schema: certificationSchema,
   },
   languages: {
     save: saveResumeLanguage,
     remove: deleteResumeLanguage,
-    reorder: reorderResumeLanguages,
     schema: languageSchema,
   },
   awards: {
     save: saveResumeAward,
     remove: deleteResumeAward,
-    reorder: reorderResumeAwards,
     schema: awardSchema,
   },
   volunteer: {
     save: saveResumeVolunteer,
     remove: deleteResumeVolunteer,
-    reorder: reorderResumeVolunteer,
     schema: volunteerSchema,
   },
 }
@@ -473,14 +423,16 @@ export function Entries({
     }
   }
   async function move(index: number, direction: -1 | 1) {
+    if (!action.reorder) return
     const target = index + direction
     if (target < 0 || target >= items.length) return
     const next = [...items]
     ;[next[index], next[target]] = [next[target], next[index]]
-    setItems(next)
+    const ordered = next.map((item, sortOrder) => ({ ...item, sortOrder }))
+    setItems(ordered)
     try {
       await action.reorder({
-        data: { resumeId, ids: next.map((item) => item.id) },
+        data: { resumeId, ids: ordered.map((item) => item.id) },
       })
       onSaved()
     } catch (error) {
@@ -524,13 +476,11 @@ export function Entries({
                     item.title ||
                     item.organization}
                 </strong>
-                <span className="block truncate text-sm text-base-content/60">
-                  {item.company ||
-                    item.institution ||
-                    item.role ||
-                    item.issuer ||
-                    item.proficiency}
-                </span>
+                {entrySecondaryText(item) ? (
+                  <span className="block truncate text-sm text-base-content/60">
+                    {entrySecondaryText(item)}
+                  </span>
+                ) : null}
               </div>
               <button
                 className="btn btn-ghost btn-sm"
@@ -545,22 +495,26 @@ export function Entries({
               >
                 <Trash2 size={15} />
               </button>
-              <button
-                className="btn btn-ghost btn-sm"
-                disabled={!index}
-                aria-label="Move up"
-                onClick={() => void move(index, -1)}
-              >
-                <ArrowUp size={15} />
-              </button>
-              <button
-                className="btn btn-ghost btn-sm"
-                disabled={index === items.length - 1}
-                aria-label="Move down"
-                onClick={() => void move(index, 1)}
-              >
-                <ArrowDown size={15} />
-              </button>
+              {action.reorder && (
+                <>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    disabled={!index}
+                    aria-label="Move up"
+                    onClick={() => void move(index, -1)}
+                  >
+                    <ArrowUp size={15} />
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    disabled={index === items.length - 1}
+                    aria-label="Move down"
+                    onClick={() => void move(index, 1)}
+                  >
+                    <ArrowDown size={15} />
+                  </button>
+                </>
+              )}
             </li>
           ))}
         </ul>
@@ -580,11 +534,14 @@ function entryDescription(kind: EntryKind) {
     return 'Show personal, academic, freelance, or professional projects that strengthen your application.'
   if (kind === 'certifications')
     return 'Add credentials that are relevant to the role. They render only when populated.'
-  if (kind === 'languages')
-    return 'List languages and a clear proficiency level when useful for the target role.'
+  if (kind === 'languages') return 'Select the languages you speak.'
   if (kind === 'awards')
     return 'Add meaningful recognition, grants, or competition results.'
   return 'Add community, nonprofit, or leadership work that supports your professional story.'
+}
+
+function entrySecondaryText(item: any) {
+  return item.company || item.institution || item.role || item.issuer || ''
 }
 
 type EntryField = {
@@ -626,10 +583,7 @@ const entryFields: Record<EntryKind, EntryField[]> = {
     { key: 'date', label: 'Date', type: 'month' },
     { key: 'credentialUrl', label: 'Credential URL', type: 'url' },
   ],
-  languages: [
-    { key: 'language', label: 'Language' },
-    { key: 'proficiency', label: 'Proficiency' },
-  ],
+  languages: [{ key: 'language', label: 'Language' }],
   awards: [
     { key: 'title', label: 'Award title' },
     { key: 'issuer', label: 'Issuer' },
@@ -666,8 +620,14 @@ function EntryForm({
             {value.id ? `Edit ${entryNames[kind]}` : `Add ${entryNames[kind]}`}
           </h4>
           <p className="mt-1 text-xs text-base-content/60">
-            For highlights, enter one bullet per line. Existing paragraphs
-            remain one bullet.
+            {kind === 'languages' ? (
+              'Choose a language from the list.'
+            ) : (
+              <>
+                For highlights, enter one bullet per line. Existing paragraphs
+                remain one bullet.
+              </>
+            )}
           </p>
         </div>
         <button className="btn btn-ghost btn-sm" onClick={cancel}>
@@ -681,7 +641,9 @@ function EntryForm({
             key={field.key}
           >
             <legend className="fieldset-legend">{field.label}</legend>
-            {field.type === 'textarea' ? (
+            {kind === 'languages' && field.key === 'language' ? (
+              <LanguageSelect value={value} setValue={setValue} />
+            ) : field.type === 'textarea' ? (
               <textarea
                 className="textarea min-h-28 w-full"
                 value={String(value[field.key] ?? '')}
@@ -734,6 +696,41 @@ function EntryForm({
   )
 }
 
+function LanguageSelect({
+  value,
+  setValue,
+}: {
+  value: Record<string, string | boolean>
+  setValue: (next: Record<string, string | boolean>) => void
+}) {
+  const currentLanguage = String(value.language ?? '')
+  const isLegacyLanguage =
+    currentLanguage &&
+    !popularLanguages.includes(
+      currentLanguage as (typeof popularLanguages)[number],
+    )
+
+  return (
+    <select
+      className="select w-full"
+      value={currentLanguage}
+      onChange={(event) => setValue({ ...value, language: event.target.value })}
+    >
+      <option value="" disabled>
+        Select a language
+      </option>
+      {isLegacyLanguage && (
+        <option value={currentLanguage}>{currentLanguage}</option>
+      )}
+      {popularLanguages.map((language) => (
+        <option key={language} value={language}>
+          {language}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 export function Settings({
   activeTemplate,
   onTemplateSelect,
@@ -747,13 +744,6 @@ export function Settings({
 }) {
   const canHide = (section: ResumeDocumentSection) =>
     !['summary', 'experience', 'skills'].includes(section)
-  function move(index: number, direction: -1 | 1) {
-    const target = index + direction
-    if (target < 0 || target >= preferences.order.length) return
-    const order = [...preferences.order]
-    ;[order[index], order[target]] = [order[target], order[index]]
-    setPreferences({ ...preferences, order })
-  }
   function toggleHidden(section: ResumeDocumentSection) {
     const hidden = preferences.hidden.includes(section)
       ? preferences.hidden.filter((item) => item !== section)
@@ -777,7 +767,7 @@ export function Settings({
               onClick={() => onTemplateSelect(template.id)}
             >
               <span
-                className={`block h-12 rounded-t-box ${template.id === 'classic' ? 'bg-base-300' : template.id === 'modern' ? 'bg-info/25' : 'bg-base-200'}`}
+                className={`block h-12 rounded-t-box ${template.id === 'classic' ? 'bg-base-300' : 'bg-base-200'}`}
               />
               <span className="block p-3 text-sm font-semibold">
                 {template.displayName}
@@ -798,12 +788,12 @@ export function Settings({
         <div className="mb-3">
           <h4 className="text-sm font-semibold">Document section order</h4>
           <p className="mt-1 text-xs text-base-content/60">
-            Move sections to match your story. Optional sections can be hidden
-            when they are not relevant.
+            Sections use a standard recruiter-friendly order. Optional sections
+            can be hidden when they are not relevant.
           </p>
         </div>
         <ul className="grid gap-2">
-          {preferences.order.map((section, index) => (
+          {preferences.order.map((section) => (
             <li
               className="flex items-center gap-2 rounded-box border border-base-300 p-2"
               key={section}
@@ -816,22 +806,6 @@ export function Settings({
                   </span>
                 )}
               </span>
-              <button
-                className="btn btn-ghost btn-xs"
-                disabled={!index}
-                aria-label={`Move ${sectionLabels[section]} up`}
-                onClick={() => move(index, -1)}
-              >
-                <ChevronUp size={14} />
-              </button>
-              <button
-                className="btn btn-ghost btn-xs"
-                disabled={index === preferences.order.length - 1}
-                aria-label={`Move ${sectionLabels[section]} down`}
-                onClick={() => move(index, 1)}
-              >
-                <ChevronDown size={14} />
-              </button>
               {canHide(section) && (
                 <button
                   className="btn btn-ghost btn-xs"

@@ -8,6 +8,7 @@ import {
   Link,
   redirect,
   useNavigate,
+  useRouter,
 } from '@tanstack/react-router'
 import { ArrowRight, LockKeyhole, Mail } from 'lucide-react'
 import { useState } from 'react'
@@ -21,6 +22,7 @@ export const Route = createFileRoute('/sign-in')({
 
 function SignInPage() {
   const navigate = useNavigate({ from: Route.fullPath })
+  const router = useRouter()
   const [authError, setAuthError] = useState<string | null>(null)
   const form = useForm({
     defaultValues: { email: '', password: '' },
@@ -34,7 +36,8 @@ function SignInPage() {
         )
         return
       }
-      navigate({ to: '/app/resumes' })
+      await navigate({ to: '/app/resumes', replace: true })
+      await router.invalidate()
     },
   })
 

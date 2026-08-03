@@ -51,7 +51,7 @@ export function HeroSection() {
         <div className="relative mx-auto w-full max-w-[31rem]">
           <div className="absolute -inset-4 rounded-box bg-primary/10 blur-2xl" />
           <div className="relative overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-2xl">
-            <ResumeDocument templateId="modern" />
+            <ResumeDocument templateId="classic" />
           </div>
         </div>
       </div>

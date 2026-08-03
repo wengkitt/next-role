@@ -3,6 +3,21 @@ import type { TemplateId } from '#/resume-templates/registry'
 import { lazy, Suspense, useEffect, useState } from 'react'
 
 const ClientResumePdfPreview = lazy(() => import('./ResumePdfPreviewClient'))
+const PREVIEW_UPDATE_DELAY_MS = 300
+
+function useDebouncedValue<T>(value: T, delayMs: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedValue(value)
+    }, delayMs)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [delayMs, value])
+
+  return debouncedValue
+}
 
 function PreviewFallback({ compact = false }: { compact?: boolean }) {
   return (
@@ -29,6 +44,7 @@ export function ResumePdfPreview({
   onPageCountChange?: (pageCount: number) => void
 }) {
   const [mounted, setMounted] = useState(false)
+  const previewData = useDebouncedValue(data, PREVIEW_UPDATE_DELAY_MS)
 
   useEffect(() => {
     setMounted(true)
@@ -38,7 +54,7 @@ export function ResumePdfPreview({
   return (
     <Suspense fallback={<PreviewFallback compact />}>
       <ClientResumePdfPreview
-        data={data}
+        data={previewData}
         templateId={templateId}
         title={title}
         onPageCountChange={onPageCountChange}

@@ -80,9 +80,9 @@ type ResumeEditorProps = {
 const defaultSectionOrder: ResumeDocumentSection[] = [
   'summary',
   'experience',
+  'education',
   'skills',
   'projects',
-  'education',
   'certifications',
   'languages',
   'awards',
@@ -269,7 +269,10 @@ export function ResumeEditor(props: ResumeEditorProps) {
             resumeId={props.resume.id}
             items={state.skills}
             setItems={state.setSkills}
-            onSaved={() => state.markSaved('skills')}
+            onSaved={() => {
+              state.markSaved('skills')
+              setError('')
+            }}
             fail={showError}
           />
         )
@@ -294,7 +297,10 @@ export function ResumeEditor(props: ResumeEditorProps) {
                   ? state.setEducation
                   : state.setProjects
             }
-            onSaved={() => state.markSaved(state.section)}
+            onSaved={() => {
+              state.markSaved(state.section)
+              setError('')
+            }}
             fail={showError}
           />
         )
@@ -322,7 +328,10 @@ export function ResumeEditor(props: ResumeEditorProps) {
             resumeId={props.resume.id}
             items={optionalState.items}
             setItems={optionalState.setItems}
-            onSaved={() => state.markSaved(optionalSection)}
+            onSaved={() => {
+              state.markSaved(optionalSection)
+              setError('')
+            }}
             fail={showError}
           />
         )

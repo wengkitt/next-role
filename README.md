@@ -11,7 +11,7 @@ NextRole is a professional resume builder for creating, managing, and exporting 
   - Work experience and education
   - Skills and projects
   - Certifications, languages, awards, and volunteer work
-- Three PDF templates: Classic ATS, Modern ATS, and Minimal
+- Two PDF templates: Classic ATS and Minimal
 - Reorderable and hideable resume sections
 - Live A4 PDF preview with page count feedback
 - PDF export with selectable text
