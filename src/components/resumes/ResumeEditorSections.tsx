@@ -103,8 +103,8 @@ export function Profile({
             Professional links
           </h4>
           <p className="mt-0.5 text-xs text-base-content/60">
-            The PDF shows compact labels such as Portfolio, LinkedIn, and
-            GitHub.
+            The PDF prints full URLs with labels such as Portfolio, LinkedIn,
+            and GitHub.
           </p>
         </div>
         <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
