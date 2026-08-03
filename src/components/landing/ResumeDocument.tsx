@@ -22,13 +22,6 @@ const templateStyles: Record<
     contact: 'text-base-content/65',
     section: 'text-primary',
   },
-  modern: {
-    header: 'rounded-box bg-primary px-3 py-3',
-    title: 'font-bold text-primary-content',
-    role: 'text-primary-content/85',
-    contact: 'text-primary-content/75',
-    section: 'text-primary',
-  },
   minimal: {
     header: 'border-b border-base-300 pb-3',
     title: 'font-semibold',

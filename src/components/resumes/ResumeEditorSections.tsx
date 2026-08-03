@@ -767,7 +767,7 @@ export function Settings({
               onClick={() => onTemplateSelect(template.id)}
             >
               <span
-                className={`block h-12 rounded-t-box ${template.id === 'classic' ? 'bg-base-300' : template.id === 'modern' ? 'bg-info/25' : 'bg-base-200'}`}
+                className={`block h-12 rounded-t-box ${template.id === 'classic' ? 'bg-base-300' : 'bg-base-200'}`}
               />
               <span className="block p-3 text-sm font-semibold">
                 {template.displayName}

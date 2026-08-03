@@ -1,4 +1,4 @@
-export type TemplateId = 'classic' | 'modern' | 'minimal'
+export type TemplateId = 'classic' | 'minimal'
 
 export type ResumeTemplate = {
   id: TemplateId
@@ -13,12 +13,6 @@ export const resumeTemplates: ResumeTemplate[] = [
     displayName: 'Classic ATS',
     description: 'Single-column hierarchy with restrained blue accents.',
     guidance: 'Best default for most professional and technical applications.',
-  },
-  {
-    id: 'modern',
-    displayName: 'Modern ATS',
-    description: 'The same searchable structure with a stronger header.',
-    guidance: 'A polished choice when you want a little more visual presence.',
   },
   {
     id: 'minimal',

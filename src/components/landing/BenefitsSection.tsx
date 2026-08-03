@@ -22,7 +22,7 @@ export function BenefitsSection() {
       eyebrow: '03',
       title: 'Choose your presentation',
       description:
-        'Use Classic ATS, Modern ATS, or Minimal when you want a different visual starting point.',
+        'Use Classic ATS or Minimal when you want a different visual starting point.',
     },
     {
       icon: Eye,

@@ -74,7 +74,7 @@ export const resumes = sqliteTable(
       .notNull()
       .default('draft'),
     templateId: text('template_id', {
-      enum: ['classic', 'modern', 'minimal'],
+      enum: ['classic', 'minimal'],
     })
       .notNull()
       .default('classic'),

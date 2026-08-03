@@ -24,7 +24,6 @@ const colors = {
   muted: '#56616d',
   rule: '#cbd3da',
   accent: '#285a7d',
-  accentSoft: '#eaf1f5',
   white: '#ffffff',
 }
 
@@ -45,16 +44,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     marginBottom: 18,
     paddingBottom: 12,
-  },
-  modernHeader: {
-    backgroundColor: colors.accentSoft,
-    borderBottomColor: colors.accent,
-    borderBottomWidth: 2,
-    marginLeft: -42,
-    marginRight: -42,
-    paddingLeft: 42,
-    paddingRight: 42,
-    paddingTop: 12,
   },
   minimalHeader: {
     borderBottomWidth: 0,
@@ -109,10 +98,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 3,
     textTransform: 'uppercase',
-  },
-  modernSectionHeading: {
-    borderBottomColor: colors.accent,
-    borderBottomWidth: 2,
   },
   minimalSectionHeading: {
     borderBottomWidth: 0,
@@ -244,7 +229,6 @@ function DocumentHeader({
 }) {
   const headerStyle = [
     styles.header,
-    ...(templateId === 'modern' ? [styles.modernHeader] : []),
     ...(templateId === 'minimal' ? [styles.minimalHeader] : []),
   ]
   return (
@@ -280,7 +264,6 @@ function DocumentSection({
         minPresenceAhead={26}
         style={[
           styles.sectionHeading,
-          ...(templateId === 'modern' ? [styles.modernSectionHeading] : []),
           ...(templateId === 'minimal' ? [styles.minimalSectionHeading] : []),
         ]}
       >

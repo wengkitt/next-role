@@ -23,7 +23,7 @@ export type ResumeSummary = {
   id: string
   title: string
   status: 'draft' | 'complete' | 'archived'
-  templateId: 'classic' | 'modern' | 'minimal'
+  templateId: 'classic' | 'minimal'
   createdAt: string
   updatedAt: string
 }
@@ -134,17 +134,22 @@ const toSummary = (resume: {
   id: string
   title: string
   status: ResumeSummary['status']
-  templateId: ResumeSummary['templateId']
+  templateId: string
   createdAt: Date
   updatedAt: Date
 }): ResumeSummary => ({
   id: resume.id,
   title: resume.title,
   status: resume.status,
-  templateId: resume.templateId,
+  templateId: normalizeTemplateId(resume.templateId),
   createdAt: resume.createdAt.toISOString(),
   updatedAt: resume.updatedAt.toISOString(),
 })
+
+const normalizeTemplateId = (
+  templateId: string,
+): ResumeSummary['templateId'] =>
+  templateId === 'minimal' ? 'minimal' : 'classic'
 
 export const getResumeSummaries = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -270,7 +275,7 @@ export const duplicateResume = createServerFn({ method: 'POST' })
       userId: user.id,
       title: `${source.title} Copy`,
       status: 'draft' as const,
-      templateId: source.templateId,
+      templateId: normalizeTemplateId(source.templateId),
       createdAt: now,
       updatedAt: now,
     }
