@@ -390,9 +390,9 @@ function ProjectEntry({ item }: { item: ResumeProjectData }) {
 
 function SkillList({ skills }: { skills: string[] }) {
   return (
-    <Text style={styles.skills}>
+    <Text style={styles.skills} hyphenationCallback={(word) => [word]}>
       <Text style={styles.skillLabel}>Core skills: </Text>
-      {skills.join('  |  ')}
+      {skills.join(' | ')}
     </Text>
   )
 }
