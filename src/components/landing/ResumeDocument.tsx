@@ -16,11 +16,11 @@ const templateStyles: Record<
   }
 > = {
   classic: {
-    header: 'border-b-2 border-primary pb-3',
-    title: 'font-bold',
-    role: 'text-primary',
+    header: 'border-b-2 border-base-content/70 pb-3',
+    title: 'font-serif font-medium',
+    role: 'text-base-content/70',
     contact: 'text-base-content/65',
-    section: 'text-primary',
+    section: 'text-base-content/80',
   },
   minimal: {
     header: 'border-b border-base-300 pb-3',
@@ -39,11 +39,11 @@ export function ResumeDocument({
 
   return (
     <article
-      className={`bg-base-100 text-base-content shadow-xl ${compact ? 'min-h-[16rem] p-4 text-[6px] leading-tight' : 'min-h-[620px] p-7 text-[10px] leading-relaxed sm:p-9 sm:text-xs'}`}
+      className={`bg-base-100 text-base-content  ${compact ? 'min-h-[24rem] p-6 text-[8px] leading-relaxed' : 'min-h-[540px] p-7 text-[10px] leading-relaxed sm:p-9 sm:text-[11px]'}`}
     >
       <header className={styles.header}>
         <h3
-          className={`${styles.title} tracking-tight ${compact ? 'text-sm' : 'text-2xl'}`}
+          className={`${styles.title} tracking-tight ${compact ? 'text-xl' : 'text-3xl'}`}
         >
           Maya Chen
         </h3>

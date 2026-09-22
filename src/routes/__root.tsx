@@ -1,3 +1,4 @@
+import { AppErrorPage, NotFoundPage } from '#/components/RouteStates'
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
@@ -27,6 +28,8 @@ export const Route = createRootRoute({
     ],
   }),
   shellComponent: RootDocument,
+  notFoundComponent: NotFoundPage,
+  errorComponent: AppErrorPage,
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {

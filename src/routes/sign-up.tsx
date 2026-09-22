@@ -47,10 +47,12 @@ function SignUpPage() {
 
   return (
     <AuthShell>
-      <div className="card border border-base-300 bg-base-100 shadow-sm">
-        <div className="card-body p-6 sm:p-8">
-          <h1 className="card-title text-3xl">Create your account</h1>
-          <p className="text-base-content/70">
+      <div className="card bg-base-100">
+        <div className="card-body gap-3 p-0">
+          <h1 className="card-title text-3xl font-medium tracking-tight sm:text-4xl">
+            Create your account
+          </h1>
+          <p className="text-sm leading-6 text-base-content/60">
             Start building a resume for your next role today.
           </p>
           {authError && (
@@ -62,7 +64,7 @@ function SignUpPage() {
             </div>
           )}
           <form
-            className="mt-3 space-y-4"
+            className="mt-5 space-y-4"
             onSubmit={(event) => {
               event.preventDefault()
               void form.handleSubmit()
@@ -123,7 +125,7 @@ function SignUpPage() {
             <form.Subscribe selector={(state) => state.isSubmitting}>
               {(isSubmitting) => (
                 <button
-                  className="btn btn-primary btn-block mt-3"
+                  className="btn btn-primary btn-block mt-5 h-12"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -139,7 +141,7 @@ function SignUpPage() {
           </form>
           <p className="mt-5 text-center text-sm text-base-content/70">
             Already have an account?{' '}
-            <Link to="/sign-in" className="link link-primary font-medium">
+            <Link to="/sign-in" className="link font-medium text-base-content">
               Sign in
             </Link>
           </p>
@@ -172,10 +174,11 @@ function TextField({
   return (
     <fieldset className="fieldset">
       <legend className="fieldset-legend">{label}</legend>
-      <label className={`input w-full ${hasError ? 'input-error' : ''}`}>
+      <label className={`input h-12 w-full ${hasError ? 'input-error' : ''}`}>
         {icon}
         <input
           name={field.name}
+          aria-label={label}
           type={type}
           autoComplete={autoComplete}
           placeholder={placeholder}

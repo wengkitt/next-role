@@ -360,16 +360,18 @@ export function ResumeEditor(props: ResumeEditorProps) {
         : 'Save document settings'
 
   return (
-    <main className="resume-editor-main min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8">
+    <main className="min-h-[calc(100vh-4.5rem)] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1700px]">
-        <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-base-300 pb-5">
+        <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
           <div>
             <Link to="/app/resumes" className="btn btn-ghost btn-sm -ml-3">
               <ArrowLeft size={16} />
               Back to resumes
             </Link>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <h2 className="text-2xl font-bold">{props.resume.title}</h2>
+              <h1 className="break-words text-2xl font-medium tracking-tight sm:text-3xl">
+                {props.resume.title}
+              </h1>
               <span
                 className={`badge ${hasUnsavedChanges ? 'badge-warning' : 'badge-success'} badge-soft gap-1`}
               >
@@ -394,7 +396,7 @@ export function ResumeEditor(props: ResumeEditorProps) {
               Rename
             </button>
             <button
-              className="btn btn-sm lg:hidden"
+              className="btn btn-sm xl:hidden"
               onClick={() => setShowPreview((visible) => !visible)}
             >
               <Eye size={15} />
@@ -402,12 +404,13 @@ export function ResumeEditor(props: ResumeEditorProps) {
             </button>
           </div>
         </header>
-        <div className="grid items-start gap-5 xl:grid-cols-[220px_minmax(0,.9fr)_minmax(440px,1.2fr)]">
-          <aside className="grid gap-3">
+        <div className="grid items-start gap-5 xl:grid-cols-2 2xl:grid-cols-[200px_minmax(0,1fr)_minmax(0,1fr)]">
+          <aside className="grid min-w-0 gap-4 xl:col-span-2 2xl:col-span-1">
             <Navigation
               current={state.section}
               setCurrent={(nextSection) => {
                 state.setSection(nextSection)
+                setShowPreview(false)
                 setError('')
               }}
               complete={completionForState(state)}
@@ -429,18 +432,18 @@ export function ResumeEditor(props: ResumeEditorProps) {
             />
           </aside>
           <section
-            className={`card border border-base-300 bg-base-100 ${showPreview ? 'hidden lg:block' : ''}`}
+            className={`card min-w-0 border border-base-300 bg-base-100 ${showPreview ? 'hidden xl:block' : ''}`}
           >
-            <div className="card-body p-5 sm:p-6">
-              <div className="mb-2 flex items-start justify-between gap-3">
+            <div className="card-body gap-5 p-5 sm:p-7">
+              <div className="mb-1 flex items-start justify-between gap-3 border-b border-base-300 pb-5">
                 <div>
-                  <h3 className="card-title text-xl">
+                  <h3 className="card-title text-xl font-medium tracking-tight">
                     {labels[state.section]}
                   </h3>
                   <p className="mt-1 text-xs text-base-content/55">
                     {state.dirtySections[state.section]
                       ? 'This section has unsaved changes.'
-                      : 'You can move freely between sections.'}
+                      : 'Make each detail count.'}
                   </p>
                 </div>
                 {state.section !== 'settings' &&
@@ -484,13 +487,13 @@ export function ResumeEditor(props: ResumeEditorProps) {
             </div>
           </section>
           <section
-            className={`${showPreview ? '' : 'hidden'} xl:sticky xl:top-6 xl:block xl:min-h-0 xl:self-start`}
+            className={`${showPreview ? '' : 'hidden'} min-w-0 xl:sticky xl:top-6 xl:block xl:min-h-0 xl:self-start`}
           >
             <div className="mb-3 flex items-center justify-between px-1">
               <div>
                 <h3 className="text-sm font-semibold">Live preview</h3>
                 <p className="text-xs text-base-content/60">
-                  A4 · selectable text · automatic page wrapping
+                  Your document, as it will look on paper.
                 </p>
               </div>
               <span className="badge badge-ghost badge-sm">{templateId}</span>
@@ -562,17 +565,36 @@ function Navigation({
     ['settings', Settings2],
   ]
   return (
-    <aside className="card h-fit border border-base-300 bg-base-100">
-      <div className="card-body p-3">
+    <aside className="h-fit">
+      <div className="p-0">
         <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-base-content/50">
           Build your resume
         </p>
-        <nav aria-label="Resume sections">
-          <ul className="menu menu-sm p-0">
+        <label className="fieldset mb-2 2xl:hidden">
+          <span className="sr-only">Resume section</span>
+          <select
+            className="select w-full bg-base-100"
+            aria-label="Resume section"
+            value={current}
+            onChange={(event) =>
+              setCurrent(event.target.value as EditorSection)
+            }
+          >
+            {items.map(([key]) => (
+              <option key={key} value={key}>
+                {labels[key]}
+                {dirty[key] ? ' - Unsaved' : complete[key] ? ' - Complete' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        <nav aria-label="Resume sections" className="hidden 2xl:block">
+          <ul className="menu menu-sm gap-1 p-0">
             {items.map(([key, Icon]) => (
               <li key={key}>
                 <button
-                  className={current === key ? 'menu-active' : ''}
+                  aria-current={current === key ? 'step' : undefined}
+                  className={`py-3 ${current === key ? 'bg-secondary font-semibold text-secondary-content' : 'text-base-content/60'}`}
                   onClick={() => setCurrent(key)}
                 >
                   <Icon size={16} />

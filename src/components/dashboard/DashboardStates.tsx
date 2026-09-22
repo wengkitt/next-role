@@ -28,7 +28,7 @@ export function CreateResumeButton({ className }: CreateResumeButtonProps) {
         onClick={() => setIsOpen(true)}
       >
         <Plus size={18} aria-hidden="true" />
-        Create Resume
+        New resume
       </button>
       {isOpen && (
         <ResumeDialog
@@ -52,7 +52,7 @@ export function CreateResumeButton({ className }: CreateResumeButtonProps) {
 
 export function ResumeGrid({ resumes }: { resumes: ResumeSummary[] }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
       {resumes.map((resume) => (
         <ResumeCard key={resume.id} resume={resume} />
       ))}
@@ -62,15 +62,17 @@ export function ResumeGrid({ resumes }: { resumes: ResumeSummary[] }) {
 
 export function ResumeEmptyState() {
   return (
-    <section className="card border border-dashed border-base-300 bg-base-100">
-      <div className="card-body items-center py-12 text-center sm:py-16">
-        <div className="grid size-14 place-items-center rounded-full bg-base-200 text-primary">
+    <section className="card border border-dashed border-base-content/20 bg-base-100">
+      <div className="card-body items-center gap-3 px-6 py-16 text-center sm:py-20">
+        <div className="grid size-16 place-items-center rounded-2xl bg-secondary text-secondary-content">
           <FilePlus2 size={28} aria-hidden="true" />
         </div>
-        <h3 className="card-title mt-3 text-xl">Create your first resume</h3>
-        <p className="max-w-lg text-base-content/70">
-          Start building a professional resume that you can customize, export,
-          and tailor for different job applications.
+        <h3 className="card-title mt-3 text-2xl font-medium tracking-tight">
+          Create your first resume
+        </h3>
+        <p className="max-w-md text-sm leading-7 text-base-content/60">
+          Every next chapter begins somewhere. Add your experience, find your
+          words, and make something you’re proud to send.
         </p>
         <CreateResumeButton className="mt-3" />
       </div>
@@ -93,7 +95,7 @@ export function DashboardLoading() {
       </div>
       <section className="space-y-4">
         <div className="skeleton h-7 w-36" />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((index) => (
             <div className="card h-72 border border-base-300 p-5" key={index}>
               <div className="skeleton h-28 w-20" />

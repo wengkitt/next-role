@@ -1,3 +1,4 @@
+import { Download } from 'lucide-react'
 import type { ResumeDocumentData } from '#/lib/resume-document'
 import type { TemplateId } from '#/resume-templates/registry'
 import { ResumePdfDocument } from '#/resume-templates/ResumePdfDocument'
@@ -85,14 +86,14 @@ function ResumePdfDocumentPreview({
   }, [instance.blob, onPageCountChange])
 
   return (
-    <div className="resume-pdf-preview rounded-box border border-base-300 bg-base-300 p-2 sm:p-3">
+    <div className="resume-pdf-preview rounded-xl border border-base-300 bg-base-300/50 p-2 sm:p-3">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
         <span className="text-xs text-base-content/65">
           {instance.loading
             ? 'Rendering print-quality preview...'
             : instance.error
               ? 'Preview unavailable'
-              : 'Preview and download use the same A4 PDF document.'}
+              : 'Ready to share.'}
         </span>
         <div className="flex items-center gap-2">
           {pageCount !== null && (
@@ -106,7 +107,7 @@ function ResumePdfDocumentPreview({
             </span>
           )}
           <a
-            className={`btn btn-primary btn-sm ${!instance.url ? 'pointer-events-none opacity-60' : ''}`}
+            className={`btn btn-sm bg-base-100 ${!instance.url ? 'pointer-events-none opacity-60' : ''}`}
             href={instance.url ?? undefined}
             download={fileName(data.profile.name || title)}
             aria-disabled={!instance.url}
@@ -114,6 +115,7 @@ function ResumePdfDocumentPreview({
             {instance.loading && (
               <span className="loading loading-spinner loading-xs" />
             )}
+            <Download size={14} aria-hidden="true" />
             {instance.loading ? 'Preparing PDF...' : 'Export PDF'}
           </a>
         </div>

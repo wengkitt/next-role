@@ -1,18 +1,19 @@
-import { Menu } from 'lucide-react'
+import { ArrowUpRight, Menu } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
+import { Brand } from '../Brand'
 import { ThemeSelector } from '../ThemeSelector'
 
 const navLinks = [
   ['Features', '#features'],
   ['Templates', '#templates'],
-  ['How It Works', '#how-it-works'],
+  ['How it works', '#how-it-works'],
 ]
 
 export function Navbar() {
   return (
-    <header className="sticky top-0 z-40 border-b border-base-300/70 bg-base-100/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-base-300/70 bg-base-200/95 backdrop-blur-xl">
       <nav
-        className="navbar mx-auto min-h-18 max-w-7xl px-4 sm:px-6 lg:px-8"
+        className="navbar mx-auto min-h-20 max-w-7xl px-5 sm:px-10"
         aria-label="Main navigation"
       >
         <div className="navbar-start gap-2">
@@ -21,15 +22,21 @@ export function Navbar() {
               className="btn btn-ghost btn-sm btn-square list-none [&::-webkit-details-marker]:hidden"
               aria-label="Open navigation menu"
             >
-              <Menu aria-hidden="true" size={20} />
+              <Menu size={20} aria-hidden="true" />
             </summary>
-            <ul
-              className="dropdown-content menu z-50 mt-3 w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-              aria-label="Landing page navigation"
-            >
+            <ul className="dropdown-content menu z-50 mt-5 w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
               {navLinks.map(([label, href]) => (
                 <li key={label}>
-                  <a href={href}>{label}</a>
+                  <a
+                    href={href}
+                    onClick={(event) =>
+                      event.currentTarget
+                        .closest('details')
+                        ?.removeAttribute('open')
+                    }
+                  >
+                    {label}
+                  </a>
                 </li>
               ))}
               <li>
@@ -37,34 +44,42 @@ export function Navbar() {
               </li>
             </ul>
           </details>
-          <Link
-            to="/"
-            className="text-xl font-bold tracking-tight"
-            aria-label="NextRole home"
-          >
-            Next<span className="text-primary">Role</span>
+          <Link to="/" aria-label="NextRole home">
+            <Brand />
           </Link>
         </div>
         <div className="navbar-center hidden lg:flex">
-          <ul className="menu menu-horizontal gap-1 px-1 text-sm font-medium">
+          <ul className="menu menu-horizontal gap-4 text-[13px] text-base-content/65">
             {navLinks.map(([label, href]) => (
               <li key={label}>
-                <a href={href}>{label}</a>
+                <a
+                  href={href}
+                  onClick={(event) =>
+                    event.currentTarget
+                      .closest('details')
+                      ?.removeAttribute('open')
+                  }
+                >
+                  {label}
+                </a>
               </li>
             ))}
           </ul>
         </div>
-        <div className="navbar-end gap-1 sm:gap-3">
+        <div className="navbar-end gap-2 sm:gap-3">
+          <ThemeSelector />
           <Link
             to="/sign-in"
-            className="btn btn-primary btn-sm hidden sm:inline-flex"
+            className="btn btn-ghost btn-sm hidden sm:inline-flex"
           >
             Sign in
           </Link>
-          <Link to="/sign-up" className="btn btn-sm">
-            Get started
+          <Link
+            to="/sign-up"
+            className="btn btn-sm border-base-content/20 bg-transparent px-4"
+          >
+            Get started <ArrowUpRight size={15} aria-hidden="true" />
           </Link>
-          <ThemeSelector />
         </div>
       </nav>
     </header>

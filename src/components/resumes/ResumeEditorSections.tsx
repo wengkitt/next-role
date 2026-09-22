@@ -70,7 +70,7 @@ export function Profile({
 }) {
   return (
     <div className="space-y-6">
-      <p className="text-sm text-base-content/65">
+      <p className="text-sm leading-7 text-base-content/60">
         Start with the details recruiters use to identify and contact you.
       </p>
       <section aria-labelledby="contact-details-heading">
@@ -83,7 +83,7 @@ export function Profile({
             roles.
           </p>
         </div>
-        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-1 min-[1800px]:grid-cols-2">
           {fields.slice(0, 5).map((field) => (
             <ProfileField
               key={field.key}
@@ -107,7 +107,7 @@ export function Profile({
             and GitHub.
           </p>
         </div>
-        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-1 min-[1800px]:grid-cols-2">
           {fields.slice(5).map((field) => (
             <ProfileField
               key={field.key}
@@ -135,7 +135,8 @@ function ProfileField({
     <fieldset className="fieldset">
       <legend className="fieldset-legend">{field.label}</legend>
       <input
-        className="input w-full"
+        className="input h-11 w-full"
+        aria-label={field.label}
         type={field.type ?? 'text'}
         value={values[field.key]}
         onChange={(event) =>
@@ -155,7 +156,7 @@ export function Summary({
 }) {
   return (
     <div className="grid gap-3">
-      <p className="text-sm text-base-content/65">
+      <p className="text-sm leading-7 text-base-content/60">
         Write a focused overview of your experience, strongest skills, and the
         kind of role you want next. Aim for 30 to 120 words.
       </p>
@@ -217,7 +218,7 @@ export function Skills({
   }
   return (
     <div className="grid gap-4">
-      <p className="text-sm text-base-content/65">
+      <p className="text-sm leading-7 text-base-content/60">
         Use clean text in the PDF. Add only skills relevant to your target
         roles.
       </p>
@@ -452,7 +453,9 @@ export function Entries({
     )
   return (
     <div className="grid gap-4">
-      <p className="text-sm text-base-content/65">{entryDescription(kind)}</p>
+      <p className="text-sm leading-7 text-base-content/60">
+        {entryDescription(kind)}
+      </p>
       <button
         className="btn btn-sm w-fit"
         onClick={() => setForm({ ...entryDefaults[kind] })}
@@ -653,7 +656,8 @@ function EntryForm({
               />
             ) : (
               <input
-                className="input w-full"
+                className="input h-11 w-full"
+                aria-label={field.label}
                 type={field.type ?? 'text'}
                 disabled={
                   kind === 'work' &&

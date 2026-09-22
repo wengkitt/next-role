@@ -37,22 +37,37 @@ export function ResumeQualityPanel({
   const warnings = report.checks.filter((check) => check.severity === 'warning')
   const tips = report.checks.filter((check) => check.severity === 'tip')
   return (
-    <section className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <details className="group rounded-xl border border-base-300 bg-base-100">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-xs font-semibold [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2">
+          <Lightbulb size={16} aria-hidden="true" />
+          Resume readiness
+        </span>
+        <span className="flex items-center gap-2 text-base-content/60">
+          {report.progress}%{' '}
+          <span
+            className="transition-transform group-open:rotate-45"
+            aria-hidden="true"
+          >
+            +
+          </span>
+        </span>
+      </summary>
+      <div className="grid gap-3 border-t border-base-300 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="font-semibold">Resume readiness</h3>
             <p className="mt-1 text-xs text-base-content/60">
-              Advisory checks to help you prepare. Nothing here blocks editing
-              or export.
+              Advisory checks to help you prepare. Keep refining at your own
+              pace.
             </p>
           </div>
-          <span className="badge badge-primary badge-outline">
+          <span className="badge badge-sm border-base-300 bg-base-200">
             {report.progress}%
           </span>
         </div>
         <progress
-          className="progress progress-primary w-full"
+          className="progress h-1.5 w-full"
           value={report.progress}
           max="100"
           aria-label="Resume readiness progress"
@@ -69,7 +84,7 @@ export function ResumeQualityPanel({
           <div className="grid gap-2" role="list">
             {[...warnings, ...tips].slice(0, 8).map((check) => (
               <div
-                className="flex items-start gap-2 rounded-box border border-base-300 p-2.5"
+                className="flex flex-wrap items-start gap-2 border-t border-base-300 pt-3"
                 key={check.id}
                 role="listitem"
               >
@@ -101,6 +116,6 @@ export function ResumeQualityPanel({
           </div>
         )}
       </div>
-    </section>
+    </details>
   )
 }

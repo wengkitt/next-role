@@ -1,4 +1,4 @@
-import { Check, Palette } from 'lucide-react'
+import { Check, SunMoon } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 
 export const DEFAULT_THEME = 'light'
@@ -63,8 +63,14 @@ export function ThemeSelector() {
   const menuRef = useRef<HTMLDetailsElement>(null)
 
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem('nextrole-theme')
-    if (isThemeName(savedTheme)) setTheme(savedTheme)
+    function syncTheme() {
+      const currentTheme =
+        document.documentElement.dataset.theme ?? DEFAULT_THEME
+      if (isThemeName(currentTheme)) setTheme(currentTheme)
+    }
+    syncTheme()
+    window.addEventListener('nextrole-theme-change', syncTheme)
+    return () => window.removeEventListener('nextrole-theme-change', syncTheme)
   }, [])
 
   useEffect(() => {
@@ -90,6 +96,7 @@ export function ThemeSelector() {
     setTheme(nextTheme)
     document.documentElement.dataset.theme = nextTheme
     window.localStorage.setItem('nextrole-theme', nextTheme)
+    window.dispatchEvent(new Event('nextrole-theme-change'))
     menuRef.current?.removeAttribute('open')
   }
 
@@ -100,29 +107,30 @@ export function ThemeSelector() {
         aria-label="Choose color theme"
         aria-controls={menuId}
       >
-        <Palette aria-hidden="true" size={18} />
+        <SunMoon aria-hidden="true" size={18} />
       </summary>
       <ul
         id={menuId}
-        className="dropdown-content menu z-50 mt-3 w-44 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
+        className="dropdown-content menu z-50 mt-3 max-h-80 w-44 flex-nowrap overflow-y-auto rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
         aria-label="Choose color theme"
       >
         {ENABLED_THEMES.map((availableTheme) => (
           <li key={availableTheme.value}>
-            <label className="flex cursor-pointer items-center gap-3">
-              <input
-                type="radio"
-                name="theme-picker"
-                value={availableTheme.value}
-                className="theme-controller sr-only"
-                checked={theme === availableTheme.value}
-                onChange={() => selectTheme(availableTheme.value)}
-              />
+            <button
+              type="button"
+              className="flex items-center gap-3"
+              aria-pressed={theme === availableTheme.value}
+              onClick={() => selectTheme(availableTheme.value)}
+            >
               <span className="flex-1">{availableTheme.label}</span>
               {theme === availableTheme.value && (
-                <Check className="text-primary" aria-hidden="true" size={16} />
+                <Check
+                  className="text-base-content/60"
+                  aria-hidden="true"
+                  size={16}
+                />
               )}
-            </label>
+            </button>
           </li>
         ))}
       </ul>

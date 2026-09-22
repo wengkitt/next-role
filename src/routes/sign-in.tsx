@@ -43,10 +43,12 @@ function SignInPage() {
 
   return (
     <AuthShell>
-      <div className="card border border-base-300 bg-base-100 shadow-sm">
-        <div className="card-body p-6 sm:p-8">
-          <h1 className="card-title text-3xl">Welcome back</h1>
-          <p className="text-base-content/70">
+      <div className="card bg-base-100">
+        <div className="card-body gap-3 p-0">
+          <h1 className="card-title text-3xl font-medium tracking-tight sm:text-4xl">
+            Welcome back
+          </h1>
+          <p className="text-sm leading-6 text-base-content/60">
             Sign in to continue building your next resume.
           </p>
           {authError && (
@@ -58,7 +60,7 @@ function SignInPage() {
             </div>
           )}
           <form
-            className="mt-3 space-y-4"
+            className="mt-5 space-y-4"
             onSubmit={(event) => {
               event.preventDefault()
               void form.handleSubmit()
@@ -72,12 +74,13 @@ function SignInPage() {
                   <fieldset className="fieldset">
                     <legend className="fieldset-legend">Email address</legend>
                     <label
-                      className={`input w-full ${hasError ? 'input-error' : ''}`}
+                      className={`input h-12 w-full ${hasError ? 'input-error' : ''}`}
                     >
                       <Mail size={17} aria-hidden="true" />
                       <input
                         name={field.name}
                         type="email"
+                        aria-label="Email address"
                         autoComplete="email"
                         placeholder="you@example.com"
                         value={field.state.value}
@@ -112,12 +115,13 @@ function SignInPage() {
                   <fieldset className="fieldset">
                     <legend className="fieldset-legend">Password</legend>
                     <label
-                      className={`input w-full ${hasError ? 'input-error' : ''}`}
+                      className={`input h-12 w-full ${hasError ? 'input-error' : ''}`}
                     >
                       <LockKeyhole size={17} aria-hidden="true" />
                       <input
                         name={field.name}
                         type="password"
+                        aria-label="Password"
                         autoComplete="current-password"
                         placeholder="Enter your password"
                         value={field.state.value}
@@ -147,7 +151,7 @@ function SignInPage() {
             <form.Subscribe selector={(state) => state.isSubmitting}>
               {(isSubmitting) => (
                 <button
-                  className="btn btn-primary btn-block mt-3"
+                  className="btn btn-primary btn-block mt-5 h-12"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -163,7 +167,7 @@ function SignInPage() {
           </form>
           <p className="mt-5 text-center text-sm text-base-content/70">
             New to NextRole?{' '}
-            <Link to="/sign-up" className="link link-primary font-medium">
+            <Link to="/sign-up" className="link font-medium text-base-content">
               Create an account
             </Link>
           </p>

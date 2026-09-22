@@ -1,43 +1,36 @@
 import { Link } from '@tanstack/react-router'
+import { Brand } from '../Brand'
 
 export function Footer() {
   return (
-    <footer className="bg-base-200 text-base-content">
-      <div className="footer mx-auto max-w-7xl px-4 py-12 sm:footer-horizontal sm:px-6 lg:px-8">
-        <aside>
-          <Link to="/" className="text-xl font-bold tracking-tight">
-            Next<span className="text-primary">Role</span>
+    <footer className="bg-base-200 px-6 sm:px-10">
+      <div className="mx-auto flex max-w-6xl flex-col gap-8 py-12 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <Link to="/" aria-label="NextRole home">
+            <Brand />
           </Link>
-          <p className="max-w-xs leading-6 text-base-content/65">
-            A clear, guided resume builder for your next great opportunity.
+          <p className="mt-3 text-xs text-base-content/50">
+            For the next chapter of your working life.
           </p>
-          <div className="sm:col-span-full sm:mt-4">
-            <p className="text-sm text-base-content/60">
-              © 2026 NextRole. All rights reserved.
-            </p>
-          </div>
-        </aside>
-        <nav>
-          <h3 className="footer-title">Product</h3>
+        </div>
+        <nav
+          aria-label="Footer navigation"
+          className="flex flex-wrap gap-6 text-xs text-base-content/65"
+        >
           <a className="link link-hover" href="#features">
             Features
           </a>
           <a className="link link-hover" href="#templates">
             Templates
           </a>
-          <a className="link link-hover" href="#how-it-works">
-            How it works
-          </a>
-        </nav>
-        <nav>
-          <h3 className="footer-title">Get started</h3>
           <Link className="link link-hover" to="/sign-in">
             Sign in
           </Link>
-          <Link className="link link-hover" to="/sign-up">
-            Create an account
-          </Link>
         </nav>
+      </div>
+      <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 border-t border-base-300 py-6 text-[11px] text-base-content/45">
+        <p>© {new Date().getFullYear()} NextRole. All rights reserved.</p>
+        <p>A thoughtful next step.</p>
       </div>
     </footer>
   )

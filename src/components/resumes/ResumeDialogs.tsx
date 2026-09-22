@@ -1,3 +1,4 @@
+import { FilePlus2, Pencil, Trash2, X } from 'lucide-react'
 import { createResume, deleteResume, renameResume } from '#/data/resumes'
 import { resumeTitleSchema } from '#/data/resume-schemas'
 import { useEffect, useRef, useState } from 'react'
@@ -80,10 +81,40 @@ export function ResumeDialog({
       onClose={onClose}
       aria-labelledby="resume-dialog-title"
     >
-      <div className="modal-box">
-        <h2 id="resume-dialog-title" className="text-xl font-bold">
+      <div className="modal-box max-w-md p-7 sm:p-8">
+        <div
+          className={`mb-5 grid size-11 place-items-center rounded-xl ${isDelete ? 'bg-error/10 text-error' : 'bg-secondary text-secondary-content'}`}
+        >
+          {isDelete ? (
+            <Trash2 size={21} aria-hidden="true" />
+          ) : mode === 'create' ? (
+            <FilePlus2 size={21} aria-hidden="true" />
+          ) : (
+            <Pencil size={21} aria-hidden="true" />
+          )}
+        </div>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm btn-square absolute top-4 right-4"
+          aria-label="Close dialog"
+          disabled={isSubmitting}
+          onClick={() => dialogRef.current?.close()}
+        >
+          <X size={17} aria-hidden="true" />
+        </button>
+        <h2
+          id="resume-dialog-title"
+          className="text-2xl font-medium tracking-tight"
+        >
           {heading}
         </h2>
+        {!isDelete && (
+          <p className="mt-2 text-sm leading-6 text-base-content/55">
+            {mode === 'create'
+              ? 'Give your next chapter a name. You can change it anytime.'
+              : 'A clear name helps you find the right version.'}
+          </p>
+        )}
         <form className="mt-5" onSubmit={(event) => void submit(event)}>
           {isDelete ? (
             <p className="leading-7 text-base-content/70">
@@ -95,7 +126,9 @@ export function ResumeDialog({
               <legend className="fieldset-legend">Resume title</legend>
               <input
                 ref={inputRef}
-                className={`input w-full ${error ? 'input-error' : ''}`}
+                placeholder="e.g. Product Designer - My resume"
+                aria-label="Resume title"
+                className={`input h-12 w-full ${error ? 'input-error' : ''}`}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 onBlur={() => setTitle((value) => value.trim())}
